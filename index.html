@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitLog · 健身打卡本</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--brand:#3a7d6e;--brand2:#e08a5b;--soft:#eef4f1;--line:#e4e0d8;--ink:#2b2b2b;--muted:#6b6b6b;--ok:#2f7a4a;--warn:#c0392b;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;padding-bottom:64px;}
+header{background:linear-gradient(135deg,var(--brand),#2f6358);color:#fff;padding:16px 16px 14px;}
+header h1{margin:0;font-size:18px;}
+header p{margin:3px 0 0;font-size:12.5px;opacity:.9;}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.hd-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.pf-avatars{display:flex;align-items:center;gap:7px;flex-wrap:wrap;max-width:62vw;padding-bottom:2px;}
+.avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;line-height:32px;color:#fff;font-weight:700;font-size:15px;cursor:pointer;border:2px solid transparent;flex:0 0 auto;transition:transform .12s,box-shadow .12s;user-select:none;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.avatar:hover{transform:translateY(-1px) scale(1.06);}
+.avatar.active{border-color:#fff;box-shadow:0 0 0 2px var(--brand2),0 1px 4px rgba(0,0,0,.3);}
+.avatar.add{background:rgba(255,255,255,.18);font-size:22px;font-weight:400;color:#fff;}
+.avatar.add:hover{background:rgba(255,255,255,.32);}
+.mini-btn{background:var(--brand2);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap;font-weight:600;}
+.mini-btn:hover{filter:brightness(1.08);}
+.mini-btn.del{background:#e74c3c;}
+.pf-list{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+.pf-row{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft);}
+.pf-row.active{border-color:var(--brand2);background:#fff;}
+.pf-meta{flex:1;min-width:0;}
+.pf-name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;}
+.cur-tag{background:var(--brand2);color:#fff;font-size:10px;padding:1px 6px;border-radius:6px;font-weight:600;}
+.pf-sub{font-size:12px;color:var(--muted);}
+.pf-ops{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+nav{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+nav::-webkit-scrollbar{display:none;height:0;}
+nav button{flex:0 0 auto;border:none;background:none;padding:9px 6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;text-align:center;border-bottom:2px solid transparent;}
+nav button.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:700;}
+.page{display:none;padding:14px;max-width:760px;margin:0 auto;}
+.page.active{display:block;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:14px;}
+h2{font-size:17px;margin:0 0 10px;color:var(--brand);}
+h3{font-size:14.5px;margin:14px 0 7px;color:var(--ink);}
+label{display:block;font-size:13px;color:var(--muted);margin:8px 0 3px;}
+input,select,textarea{width:100%;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);box-sizing:border-box;}
+/* iOS Safari 对 type=date 有原生外观怪癖（盒子过高/文字不对齐/最小宽度挤压），统一重置 */
+input[type="date"]{-webkit-appearance:none;appearance:none;background:#fff;line-height:1.4;}
+.row{display:flex;gap:8px;flex-wrap:nowrap;}
+.row>*{flex:1 1 0;min-width:0;}
+.row.col{flex-direction:column;gap:10px;}
+.row.col>*{flex:none;width:100%;min-width:0;}
+button.act{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-size:14px;cursor:pointer;font-weight:600;}
+button.act2{background:var(--brand2);color:#fff;border:none;border-radius:9px;padding:9px 12px;font-size:13px;cursor:pointer;}
+button.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand);border-radius:9px;padding:8px 12px;font-size:13px;cursor:pointer;}
+.bd{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--brand);margin:2px 3px 0 0;}
+.big{font-size:30px;font-weight:800;color:var(--brand);}
+.muted{color:var(--muted);font-size:12.5px;}
+.bar{height:14px;background:#ececec;border-radius:8px;overflow:hidden;margin:4px 0 2px;}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#3a7d6e,#5fb39e);}
+.bar.p>i{background:linear-gradient(90deg,#2f7a4a,#5bbf7e);}
+.bar.f>i{background:linear-gradient(90deg,#a8681f,#e0a85b);}
+.bar.c>i{background:linear-gradient(90deg,#7a3f8f,#b07fc7);}
+.metric{display:flex;justify-content:space-between;font-size:13px;margin-top:2px;}
+.item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;}
+.item .top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.item .nm{font-weight:600;font-size:14px;}
+.item.done{background:var(--soft);}
+.mini{width:54px;padding:6px;font-size:13px;text-align:center;}
+.chk{width:20px;height:20px;flex:none;}
+.chartbox{width:100%;overflow-x:auto;}
+canvas{max-width:100%;}
+.hist{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:13px;border-bottom:1px dashed var(--line);padding:8px 2px;}
+.hist b{color:var(--brand);}
+.hist .hbody{flex:1;min-width:0;line-height:1.5;}
+.hist .delete{flex:none;align-self:center;margin-left:2px;}
+.tag{font-size:10.5px;background:var(--brand2);color:#fff;padding:1px 7px;border-radius:999px;margin-left:5px;white-space:nowrap;}
+.warn{background:#fdecea;border:1px solid #f5b7b1;border-radius:10px;padding:11px 13px;color:#7b241c;font-size:13px;}
+.tip{background:#fff7ef;border:1px solid #f3d3b8;border-radius:10px;padding:11px 13px;margin:10px 0;font-size:13px;}
+.tabs{display:flex;gap:6px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;height:0;}
+.tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap;}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand);}
+ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
+.delete{color:var(--warn);font-size:12px;cursor:pointer;border:none;background:none;padding:4px 6px;white-space:nowrap;border-radius:5px;}
+.delete:hover{background:#fdecea;}
+/* 模板阶段标签 */
+.stage{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;font-weight:600;vertical-align:middle;white-space:nowrap;}
+.st-base{background:var(--soft);color:var(--brand);}
+.st-adv{background:#fbe9d7;color:#b5651d;}
+.st-lock{background:#fdecea;color:#c0392b;border:1px solid #f5b7b1;}
+.lastload{font-size:11px;color:#7a7a7a;margin:4px 0 2px;padding:3px 7px;background:#f6f3ee;border-radius:7px;}
+.lastload .up{color:var(--ok);font-weight:600;}
+.lastload .same{color:#b5651d;font-weight:600;}
+.lastload .down{color:var(--warn);font-weight:600;}
+.pr{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:6px 2px;border-bottom:1px dashed var(--line);}
+.pr:last-child{border-bottom:none;}
+.pr .nm{font-weight:600;flex:0 0 auto;}
+.pr .muted{text-align:right;}
+.center{text-align:center;}
+.empty{color:var(--muted);text-align:center;padding:18px;font-size:13px;}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.thumbs img{width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:pointer;}
+.cmp img{width:48%;border-radius:10px;border:1px solid var(--line);}
+#ph_light{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99;align-items:center;justify-content:center;cursor:zoom-out;}
+#ph_light img{max-width:92%;max-height:88%;border-radius:10px;}
+.editem{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:5px 0;display:flex;align-items:center;gap:8px;font-size:13.5px;}
+.editem input[type=checkbox]{width:18px;height:18px;flex:none;}
+</style><link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").then(function(reg){reg.addEventListener("updatefound",function(){var nw=reg.installing;if(!nw)return;nw.addEventListener("statechange",function(){if(nw.state==="installed"&&navigator.serviceWorker.controller){sessionStorage.setItem("sw_update_pending","1");nw.postMessage("SKIP_WAITING");}});});}).catch(function(e){console.log("SW 注册失败(可忽略):",e);});navigator.serviceWorker.addEventListener("controllerchange",function(){if(sessionStorage.getItem("sw_update_pending")){sessionStorage.removeItem("sw_update_pending");window.location.reload();}});});}</script>
+</head><body>
+
+<header>
+  <div class="header-top">
+    <div class="hd-left">
+      <h1>FitLog · 健身打卡本</h1>
+      <p id="hd">每日目标 —</p>
+    </div>
+    <div class="hd-right">
+      <div id="pf_avatars" class="pf-avatars"></div>
+      <button class="mini-btn" onclick="showPage('profiles')">管理</button>
+    </div>
+  </div>
+</header>
+<nav id="nav">
+  <button data-p="today" class="active">今日</button>
+  <button data-p="weight">体重</button>
+  <button data-p="train">训练</button>
+  <button data-p="diet">饮食</button>
+  <button data-p="progress">进度</button>
+  <button data-p="ref">参考</button>
+  <button data-p="data">数据</button>
+  <button data-p="profiles">档案</button>
+  <button data-p="trash">回收站</button>
+</nav>
+
+<!-- 今日 -->
+<div class="page active" id="today">
+  <div class="card center">
+    <div class="muted">距离目标还差（kg）</div>
+    <div class="big" id="t_remain">—</div>
+    <div class="muted" id="t_progress"></div>
+    <div style="margin-top:10px"><button class="act2" onclick="quickWeight()">记录今日体重</button></div>
+  </div>
+  <div class="card">
+    <h2>今日饮食进度</h2>
+    <div id="t_diet"></div>
+    <div style="margin-top:8px" class="row">
+      <button class="act2" onclick="showPage('diet')">去记录饮食</button>
+      <button class="act2" onclick="showPage('train')">去训练打卡</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>今日训练</h2>
+    <div id="t_train"></div>
+  </div>
+</div>
+
+<!-- 体重 -->
+<div class="page" id="weight">
+  <div class="card">
+    <h2>记录体重 / 围度</h2>
+    <div class="row col">
+      <div><label>日期</label><input type="date" id="w_date"></div>
+      <div><label>体重(kg)</label><input type="number" step="0.1" id="w_w" placeholder="59.4"></div>
+    </div>
+    <div class="row col">
+      <div><label>腰围(cm)</label><input type="number" step="0.1" id="w_waist" placeholder="可选"></div>
+      <div><label>臀围(cm)</label><input type="number" step="0.1" id="w_hip" placeholder="可选"></div>
+    </div>
+    <label>备注</label><textarea id="w_note" rows="2" placeholder="例：生理期第3天 / 睡眠差"></textarea>
+    <div style="margin-top:10px"><button class="act" onclick="saveWeight()">保存</button></div>
+    <div id="w_tip"></div>
+  </div>
+  <div class="card">
+    <h2>体重趋势</h2>
+    <div class="chartbox"><canvas id="cw" width="680" height="220"></canvas></div>
+    <div id="w_list"></div>
+  </div>
+  <div class="card">
+    <h2>体型照片（每周 1 张）</h2>
+    <p class="muted">建议每周同一角度、同一光线拍一张；压缩后仅存本机，最多 48 张。配合进度页可对比。</p>
+    <div class="row">
+      <button class="act2" onclick="document.getElementById('ph_in').click()">+ 上传今日照片</button>
+    </div>
+    <input type="file" id="ph_in" accept="image/*" style="display:none" onchange="addPhoto(this)">
+    <div id="ph_list" class="thumbs"></div>
+  </div>
+</div>
+
+<!-- 训练 -->
+<div class="page" id="train">
+  <div class="card">
+    <h2>训练打卡</h2>
+    <label>选择今日模板（按大类区分）</label>
+    <div class="row" style="align-items:flex-end;gap:8px">
+      <div style="flex:1;min-width:0"><select id="tpl_sel" onchange="loadTemplate()"></select></div>
+      <span id="tpl_stage"></span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="ghost" onclick="showEdit()">✎ 编辑此模板 / 加自定义动作</button>
+    </div>
+    <div id="tpl_items"></div>
+    <div style="margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--soft)">
+      <div style="font-weight:700;font-size:13.5px;color:var(--brand);margin-bottom:4px">负荷进度 · 本模板各动作最近记录</div>
+      <div id="tpl_progress"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label>体感 RPE(1-10)</label><input type="number" id="t_rpe" min="1" max="10" placeholder="6"></div>
+      <div><label>备注</label><input id="t_note" placeholder="如：状态不错"></div>
+    </div>
+    <div style="margin-top:10px"><button class="act" onclick="saveTraining()">保存今日训练</button></div>
+  </div>
+  <div class="card" id="tpl_edit" style="display:none">
+    <h2>编辑模板：<span id="ed_name"></span></h2>
+    <p class="muted">勾选动作加入本模板；也可新增自定义动作。</p>
+    <div id="ed_list"></div>
+    <div class="tip">
+      新增自定义动作：
+      <input id="ca_name" placeholder="动作名，如：弹力带侧平举">
+      <input id="ca_how" placeholder="要领，如：肩外展至肩高，不耸肩" style="margin-top:8px">
+      <div class="row" style="margin-top:8px">
+        <button class="act2" onclick="addCustomAction()">+ 加入模板</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="act" onclick="saveTemplate()">保存模板</button>
+      <button class="ghost" onclick="hideEdit()">取消</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>训练历史</h2>
+    <div id="t_hist"></div>
+  </div>
+  <div class="card" id="hist_edit" style="display:none">
+    <h2>编辑训练记录：<span id="he_title"></span></h2>
+    <input type="hidden" id="he_idx">
+    <div id="he_items"></div>
+    <div class="row" style="margin-top:8px"><select id="he_add" onchange="addHistItem()"></select></div>
+    <div class="row" style="margin-top:8px">
+      <button class="act" onclick="saveHistEdit()">保存修改</button>
+      <button class="ghost" onclick="document.getElementById('hist_edit').style.display='none'">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 饮食 -->
+<div class="page" id="diet">
+  <div class="card">
+    <h2>今日饮食累计</h2>
+    <div id="d_today"></div>
+  </div>
+  <div class="card">
+    <div class="tabs" id="d_tabs"></div>
+    <div id="d_list"></div>
+    <button class="ghost" style="margin-top:8px;width:100%" onclick="toggleManual()">+ 手动添加食物/餐</button>
+    <div id="manual_form" class="tip" style="display:none;margin-top:8px">
+      <input id="m_name" placeholder="食物/餐名称，如：煮鸡蛋">
+      <div class="row" style="margin-top:8px">
+        <input id="m_kcal" type="number" placeholder="热量 kcal">
+        <input id="m_p" type="number" placeholder="蛋白 g">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input id="m_f" type="number" placeholder="脂肪 g">
+        <input id="m_c" type="number" placeholder="碳水 g">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="act2" onclick="manualMeal()">加入</button>
+        <button class="ghost" onclick="toggleManual()">取消</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>今日已添加</h2>
+    <div id="d_added"></div>
+  </div>
+</div>
+
+<!-- 进度 -->
+<div class="page" id="progress">
+  <div class="card">
+    <h2>体重趋势</h2>
+    <div class="chartbox"><canvas id="cp_w" width="680" height="220"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>腰围趋势</h2>
+    <div class="chartbox"><canvas id="cp_wa" width="680" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>体型变化对比</h2>
+    <div id="cmp_row" class="cmp row"></div>
+    <div id="ph_thumbs" class="thumbs"></div>
+    <div id="cmp_empty" class="empty" style="display:none">上传至少 2 张照片后可自动对比（在「体重」页上传）。</div>
+  </div>
+  <div class="card">
+    <h2>近 4 周打卡率</h2>
+    <div id="p_rate" class="muted"></div>
+  </div>
+</div>
+
+<!-- 参考 -->
+<div class="page" id="ref">
+  <div class="card">
+    <h2>四阶段路线图</h2>
+    <div id="r_phases"></div>
+  </div>
+  <div class="card">
+    <h2>动作要领速查</h2>
+    <div id="r_actions"></div>
+  </div>
+  <div class="card">
+    <h2>饮食原则</h2>
+    <ul class="l">
+      <li>蛋白优先（每餐有蛋/肉/豆/奶），主食换粗杂粮，蔬菜管饱。</li>
+      <li>少油少糖，先喝汤/吃菜再吃主食；缺口靠训练+步行产生，不靠饿。</li>
+      <li>充足膳食纤维（蔬菜/粗粮/菌菇）+ 饮水 1.8-2.2L，有助代谢与肠道健康，也增加饱腹感。</li>
+      <li>连续 3 周不掉秤→查隐形热量并加步行；乏力/掉发/状态差→热量+100~150。</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 数据 -->
+<div class="page" id="data">
+  <div class="card">
+    <h2>能量与摄入建议（TDEE 自动重算）</h2>
+    <p class="muted">录入体重后会按 Mifflin-St Jeor 公式自动重算 BMR / TDEE，并给出建议摄入缺口。活动系数也可在「档案」页按人设置。</p>
+    <label>活动系数</label>
+    <select id="act_sel" onchange="setActivity()">
+      <option value="1.2">久坐 1.2（基本不运动）</option>
+      <option value="1.375">轻活动 1.375（每周轻运动1-3次）</option>
+      <option value="1.55">中活动 1.55（每周中强度3-5次）</option>
+      <option value="1.725">高活动 1.725（每周高强度6-7次）</option>
+    </select>
+    <div id="tdee_box" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>数据同步（导出 / 导入）</h2>
+    <p class="muted">数据保存在本机浏览器（localStorage），不会上传。换手机/电脑时：<b>导出</b> JSON（含全部档案）→ 传到新设备 → <b>导入</b> 即可恢复，这就是你的同步方式。</p>
+    <div class="row">
+      <button class="act" onclick="exportData()">导出数据(JSON)</button>
+      <button class="act2" onclick="document.getElementById('imp').click()">导入数据</button>
+    </div>
+    <input type="file" id="imp" accept="application/json" style="display:none" onchange="importData(this)">
+    <div style="margin-top:10px"><button class="ghost" onclick="clearData()">清空当前档案数据</button></div>
+    <p class="muted" id="d_msg" style="margin-top:10px"></p>
+  </div>
+  <div class="card">
+    <h2>当前档案</h2>
+    <div id="d_profile" class="muted"></div>
+  </div>
+</div>
+
+<!-- 档案（多 profile） -->
+<div class="page" id="profiles">
+  <div class="card">
+    <h2>档案列表</h2>
+    <p class="muted">点头像或「切换」可切换当前档案；每个档案的体重/训练/饮食/照片完全独立。</p>
+    <div id="pf_list" class="pf-list"></div>
+  </div>
+  <div class="card">
+    <h2>新建档案</h2>
+    <input id="np_name" placeholder="档案名，如：我自己 / 老公 / 学员小李">
+    <div style="margin-top:8px"><button class="act" onclick="newProfile()">+ 新建档案</button></div>
+  </div>
+  <div class="card">
+    <h2>当前档案信息（<span id="pf_cur_name"></span>）</h2>
+    <label>档案名</label><input id="pf_info_name">
+    <div class="row">
+      <div><label>性别</label><select id="pf_gender"><option value="女">女</option><option value="男">男</option></select></div>
+      <div><label>年龄</label><input id="pf_age" type="number"></div>
+    </div>
+    <div class="row">
+      <div><label>身高(cm)</label><input id="pf_height" type="number"></div>
+      <div><label>起始体重(kg)</label><input id="pf_ws" type="number" step="0.1"></div>
+    </div>
+    <label>目标体重(kg)</label><input id="pf_wg" type="number" step="0.1">
+    <label>活动系数</label><select id="pf_act"><option value="1.2">久坐 1.2</option><option value="1.375">轻活动 1.375</option><option value="1.55">中活动 1.55</option><option value="1.725">高活动 1.725</option></select>
+    <h3>每日摄入目标</h3>
+    <p class="muted">也可点下方按钮，按性别／年龄／身高／当前体重／活动系数自动算出（热量缺口约 450kcal）。</p>
+    <button class="act2" onclick="autoCalcTargets()" style="margin-bottom:10px">⚙ 自动计算摄入目标</button>
+    <div class="row">
+      <div><label>热量(kcal)</label><input id="pf_cal" type="number"></div>
+      <div><label>蛋白(g)</label><input id="pf_pro" type="number"></div>
+    </div>
+    <div class="row">
+      <div><label>脂肪(g)</label><input id="pf_fat" type="number"></div>
+      <div><label>碳水(g)</label><input id="pf_carb" type="number"></div>
+    </div>
+    <div style="margin-top:10px"><button class="act" onclick="saveProfileInfo()">保存信息</button></div>
+  </div>
+  <div class="card">
+    <h2>删除当前档案</h2>
+    <p class="muted">删除后将一并清除该档案的全部数据，不可恢复。至少保留一个档案。</p>
+    <button class="delete" onclick="delProfile()">删除当前档案</button>
+  </div>
+</div>
+
+<!-- 回收站 -->
+<div class="page" id="trash">
+  <div class="card">
+    <h2>批量删除（可设截止日期）</h2>
+    <p class="muted">删除的记录会进下方回收站（仅当前档案），可随时还原，误操作也不怕。</p>
+    <div class="row col">
+      <div><label>数据类型</label><select id="bd_type"><option value="weight">体重/围度</option><option value="train">训练</option><option value="photo">照片</option><option value="meal">饮食</option></select></div>
+      <div><label>截止日期（含当天）</label><input type="date" id="bd_date"></div>
+    </div>
+    <div style="margin-top:8px"><button class="act" onclick="batchDelete()">删除该日期前的全部记录</button></div>
+  </div>
+  <div class="card">
+    <h2>回收站（误删可还原）</h2>
+    <div id="trash_list"></div>
+    <div style="margin-top:10px"><button class="ghost" onclick="emptyTrash()">清空回收站</button></div>
+  </div>
+</div>
+<div id="ph_light" onclick="if(event.target===this)this.style.display='none'"><div style="text-align:center"><img id="ph_light_img" src="" alt="" style="max-width:92%;max-height:78%;border-radius:10px"><div style="margin-top:10px"><button class="act2" onclick="delPhoto()">删除这张照片</button></div></div></div>
+
+<script>
+const DB_KEY="fitlog_v1";
+const RECIPES={"B": [{"id": "B1", "name": "双蛋·全麦·豆浆经典盘", "items": [["鸡蛋", 100], ["全麦面包", 35], ["无糖豆浆", 200], ["小番茄", 100], ["核桃", 8]], "how": "鸡蛋水煮或水波蛋（不加油）；全麦面包直接吃或干烙；豆浆选无糖现磨。最省事的基础款，蛋白稳、饱腹久。", "tag": "经典·高蛋白", "kcal": 369, "p": 24.6, "f": 18.1, "c": 27.1}, {"id": "B2", "name": "燕麦牛奶双蛋白碗", "items": [["燕麦片", 35], ["牛奶", 200], ["鸡蛋", 50], ["希腊酸奶", 100], ["蓝莓", 50]], "how": "燕麦用热牛奶泡3分钟，铺上酸奶蓝莓，配1个水煮蛋。钙+蛋白+膳食纤维一次到位。", "tag": "饱腹·补钙", "kcal": 399, "p": 28.6, "f": 13.7, "c": 40.6}, {"id": "B3", "name": "中式杂粮粥·豆腐小菜", "items": [["大米", 25], ["小米", 15], ["鸡蛋", 50], ["北豆腐", 80], ["菠菜", 100], ["香油", 3], ["无糖豆浆", 200]], "how": "杂粮粥前一晚预约煮；北豆腐切块焯水，拌菠菜加几滴香油。适合想吃热乎中式早餐时。", "tag": "中式·暖胃", "kcal": 408, "p": 28.2, "f": 15.4, "c": 40.2}, {"id": "B4", "name": "鸡蛋蔬菜三明治", "items": [["全麦面包", 60], ["鸡蛋", 100], ["生菜", 50], ["番茄", 50], ["牛奶", 150]], "how": "鸡蛋煎成薄蛋饼（用不粘锅少油或水炒），夹全麦面包+生菜番茄。可前一晚备好冷藏，早上直接拿。", "tag": "便携·可带", "kcal": 391, "p": 24.3, "f": 15.8, "c": 37.3}, {"id": "B5", "name": "蒸红薯·蛋奶组合", "items": [["红薯", 120], ["鸡蛋", 100], ["牛奶", 200], ["核桃", 8]], "how": "红薯蒸熟（可一次蒸几个冷藏）；配水煮蛋和热牛奶。便秘友好，红薯膳食纤维高。", "tag": "通便·高纤", "kcal": 422, "p": 22.4, "f": 20.1, "c": 38.7}, {"id": "B6", "name": "菠菜胡萝卜鸡蛋饼", "items": [["鸡蛋", 100], ["蛋清", 30], ["全麦面包", 35], ["菠菜", 80], ["胡萝卜", 30], ["橄榄油", 3], ["无糖豆浆", 200]], "how": "菠菜焯水切碎，与蛋液、胡萝卜碎混匀，不粘锅刷薄油摊成饼。孩子也能一起吃。", "tag": "蔬菜量足", "kcal": 371, "p": 28.3, "f": 16.5, "c": 27.8}, {"id": "B7", "name": "咸豆腐脑·虾皮紫菜", "items": [["南豆腐", 200], ["鸡蛋", 50], ["虾皮", 3], ["紫菜", 2], ["香油", 2], ["全麦面包", 35], ["小番茄", 100]], "how": "豆腐蒸热，加虾皮紫菜、几滴香油做成咸豆腐脑。低脂高蛋白，补钙还好消化。", "tag": "低脂·补钙", "kcal": 385, "p": 24.7, "f": 14.6, "c": 29.6}, {"id": "B8", "name": "隔夜燕麦杯（懒人）", "items": [["燕麦片", 35], ["希腊酸奶", 150], ["牛奶", 100], ["蓝莓", 50], ["核桃", 8], ["鸡蛋", 50]], "how": "前一晚把燕麦+酸奶+牛奶装杯冷藏，早上取出加蓝莓核桃，配1个水煮蛋。全程不用开火。", "tag": "零厨艺·快手", "kcal": 427, "p": 31.9, "f": 15.4, "c": 40.5}], "L": [{"id": "L1", "name": "香煎鸡胸·杂粮饭·西兰花", "items": [["鸡胸肉", 120], ["杂粮饭", 150], ["西兰花", 150], ["橄榄油", 5]], "how": "鸡胸横切成薄片，用少许盐黑胡椒腌10分钟，中火每面煎2-3分钟别过老；西兰花焯水拌橄榄油。", "tag": "增肌主力", "kcal": 431, "p": 33.9, "f": 13.1, "c": 45.5}, {"id": "L2", "name": "虾仁芦笋·糙米饭", "items": [["虾仁", 120], ["糙米饭", 150], ["芦笋", 100], ["胡萝卜", 50], ["橄榄油", 5]], "how": "虾仁用料酒姜片去腥，快炒1-2分钟至变色即可（久炒会柴）；芦笋胡萝卜同炒。低脂高蛋白。", "tag": "低脂·高蛋白", "kcal": 373, "p": 34.9, "f": 6.9, "c": 44.0}, {"id": "L3", "name": "番茄牛里脊·米饭·菠菜", "items": [["牛里脊", 100], ["米饭", 150], ["番茄", 150], ["菠菜", 100], ["橄榄油", 5]], "how": "牛肉逆纹切薄片，先炒番茄出汁再下牛肉快炒；菠菜最后烫熟。补铁，适合补铁、气血偏弱时。", "tag": "补铁", "kcal": 383, "p": 28.1, "f": 8.3, "c": 50.6}, {"id": "L4", "name": "香煎三文鱼·杂粮饭", "items": [["三文鱼", 100], ["杂粮饭", 150], ["西兰花", 150], ["橄榄油", 5]], "how": "三文鱼厨房纸吸干水分，带皮面先煎3分钟再翻面2分钟，撒海盐黑胡椒。富含Omega-3，抗炎。", "tag": "抗炎·优质脂肪", "kcal": 410, "p": 27.9, "f": 14.9, "c": 42.5}, {"id": "L5", "name": "香菇烧豆腐·米饭·小白菜", "items": [["北豆腐", 150], ["米饭", 150], ["香菇", 100], ["娃娃菜", 150], ["橄榄油", 5]], "how": "豆腐切块用少量油煎至两面金黄，加香菇和生抽焖3分钟，最后下娃娃菜。素食日首选。", "tag": "素食·高钙", "kcal": 417, "p": 26.6, "f": 13.1, "c": 51.1}, {"id": "L6", "name": "鸡腿肉·蒸红薯·西兰花", "items": [["鸡腿去皮", 120], ["红薯", 150], ["西兰花", 150], ["橄榄油", 5]], "how": "鸡腿去皮后脂肪大减，煎或烤至熟透；红薯替代米饭做主食，饱腹感强、升糖慢。", "tag": "换主食", "kcal": 423, "p": 30.1, "f": 15.2, "c": 41.0}, {"id": "L7", "name": "巴沙鱼豆腐煲·杂粮饭", "items": [["巴沙鱼", 120], ["南豆腐", 100], ["杂粮饭", 150], ["娃娃菜", 150], ["橄榄油", 5]], "how": "巴沙鱼无刺，与嫩豆腐、娃娃菜同煮成煲，加姜丝白胡椒调味。刺少好嚼，带娃吃饭也省心。", "tag": "少刺·好消化", "kcal": 438, "p": 30.9, "f": 13.3, "c": 44.2}, {"id": "L8", "name": "猪里脊炒时蔬·米饭", "items": [["猪里脊", 100], ["米饭", 150], ["青椒", 100], ["豆芽", 100], ["橄榄油", 5]], "how": "里脊切丝上浆（少许淀粉蛋清）快炒更嫩；青椒豆芽最后下锅保持脆感。含B族维生素。", "tag": "快手炒菜", "kcal": 414, "p": 27.6, "f": 13.7, "c": 47.9}, {"id": "L9", "name": "鸡蛋豆腐盖饭·西兰花", "items": [["鸡蛋", 100], ["北豆腐", 100], ["米饭", 120], ["西兰花", 150], ["橄榄油", 3]], "how": "豆腐煎香后淋入蛋液半凝固即关火，盖在饭上。10分钟搞定，蛋白质密度很高。", "tag": "10分钟", "kcal": 462, "p": 34.8, "f": 17.9, "c": 41.8}, {"id": "L10", "name": "鸡胸玉米沙拉碗", "items": [["鸡胸肉", 120], ["玉米", 80], ["生菜", 150], ["小番茄", 100], ["杂粮饭", 80], ["橄榄油", 5]], "how": "所有食材切好拌匀，油用橄榄油+柠檬汁/黑醋调汁。夏天没胃口时的清爽选择。", "tag": "清爽·夏款", "kcal": 435, "p": 31.8, "f": 13.2, "c": 48.4}], "D": [{"id": "D1", "name": "清蒸鲈鱼·豆腐·菠菜", "items": [["鲈鱼", 120], ["南豆腐", 100], ["菠菜", 150], ["杂粮饭", 80], ["橄榄油", 5]], "how": "鲈鱼两面划刀铺姜丝，水开后蒸8分钟，倒掉腥水淋热油生抽。刺少蛋白高，晚餐首选。", "tag": "清淡·高蛋白", "kcal": 392, "p": 34.8, "f": 13.6, "c": 29.4}, {"id": "D2", "name": "虾仁蒸蛋·红薯·西兰花", "items": [["虾仁", 100], ["鸡蛋", 50], ["西兰花", 150], ["红薯", 100], ["橄榄油", 3]], "how": "蛋液加1.5倍温水过筛，盖保鲜膜蒸8分钟，放虾仁再蒸2分钟。嫩滑好消化。", "tag": "好消化", "kcal": 351, "p": 38.4, "f": 8.8, "c": 31.1}, {"id": "D3", "name": "番茄豆腐汤·鸡胸·青菜", "items": [["鸡胸肉", 100], ["北豆腐", 100], ["番茄", 150], ["娃娃菜", 150], ["米饭", 80]], "how": "番茄炒出汁加水煮开，下豆腐和青菜，鸡胸切片最后烫熟。一碗热汤暖身又低卡。", "tag": "汤水·暖身", "kcal": 379, "p": 37.3, "f": 10.5, "c": 35.5}, {"id": "D4", "name": "牛里脊·芦笋香菇·杂粮饭", "items": [["牛里脊", 100], ["芦笋", 100], ["香菇", 100], ["杂粮饭", 80], ["橄榄油", 5]], "how": "牛肉快炒变色盛出，再炒芦笋香菇，最后回锅拌匀。控制油量是这道菜的关键。", "tag": "低油炒菜", "kcal": 291, "p": 26.2, "f": 8.3, "c": 30.5}, {"id": "D5", "name": "鸡丝菌菇·娃娃菜·红薯", "items": [["鸡胸肉", 100], ["金针菇", 100], ["娃娃菜", 150], ["红薯", 100], ["橄榄油", 3]], "how": "鸡胸水煮后撕成丝，菌菇娃娃菜清炒或煮汤，拌入鸡丝。少油版也很香。", "tag": "少油", "kcal": 316, "p": 25.6, "f": 8.7, "c": 36.3}, {"id": "D6", "name": "三文鱼·芦笋·生菜沙拉", "items": [["三文鱼", 100], ["芦笋", 150], ["生菜", 100], ["杂粮饭", 80], ["橄榄油", 5]], "how": "三文鱼煎熟，芦笋焯水，配生菜。优质脂肪+纤维，晚上吃也不负担。", "tag": "优质脂肪", "kcal": 325, "p": 23.0, "f": 13.9, "c": 28.5}, {"id": "D7", "name": "烧豆腐·西兰花·胡萝卜", "items": [["北豆腐", 150], ["西兰花", 150], ["胡萝卜", 50], ["米饭", 80], ["橄榄油", 5]], "how": "豆腐煎至金黄，加西兰花胡萝卜和少量生抽蚝油焖2分钟。全素但蛋白不低。", "tag": "全素", "kcal": 358, "p": 27.0, "f": 13.4, "c": 33.8}, {"id": "D8", "name": "番茄鸡蛋荞麦面", "items": [["荞麦面", 40], ["鸡蛋", 100], ["番茄", 150], ["娃娃菜", 100], ["橄榄油", 3]], "how": "荞麦面煮至8分熟过凉水更筋道；番茄炒蛋做成浇头。注意面量控制在干重40g。", "tag": "面食解馋", "kcal": 357, "p": 21.4, "f": 13.2, "c": 40.4}, {"id": "D9", "name": "白灼虾·嫩豆腐·秋葵", "items": [["虾仁", 120], ["南豆腐", 150], ["秋葵", 100], ["米饭", 80], ["橄榄油", 3]], "how": "虾仁水开后煮90秒捞出蘸生抽；秋葵焯水切段。几乎无油烟的一餐。", "tag": "无油烟", "kcal": 406, "p": 42.2, "f": 8.8, "c": 33.2}, {"id": "D10", "name": "鸡胸大碗沙拉", "items": [["鸡胸肉", 120], ["生菜", 150], ["小番茄", 100], ["黄瓜", 100], ["玉米", 80], ["橄榄油", 5]], "how": "所有生食洗净切好，鸡胸煎熟切片铺上，油醋汁现拌现吃。晚餐偏轻量时选它。", "tag": "轻断食友好", "kcal": 359, "p": 30.2, "f": 12.8, "c": 32.1}], "S": [{"id": "S1", "name": "希腊酸奶+核桃", "items": [["希腊酸奶", 150], ["核桃", 8]], "kcal": 140, "p": 16.6, "f": 5.3, "c": 6.9}, {"id": "S2", "name": "苹果+杏仁", "items": [["苹果", 150], ["杏仁", 10]], "kcal": 137, "p": 2.7, "f": 5.4, "c": 22.4}, {"id": "S3", "name": "水煮蛋+小番茄", "items": [["鸡蛋", 50], ["小番茄", 100]], "kcal": 97, "p": 7.7, "f": 4.6, "c": 6.4}, {"id": "S4", "name": "无糖豆浆+全麦面包", "items": [["无糖豆浆", 300], ["全麦面包", 35]], "kcal": 179, "p": 12.2, "f": 6.0, "c": 19.0}, {"id": "S5", "name": "蛋白奶昔（运动后）", "items": [["牛奶", 200], ["蛋白粉", 20]], "kcal": 184, "p": 22.0, "f": 7.4, "c": 8.4}, {"id": "S6", "name": "猕猴桃+希腊酸奶", "items": [["猕猴桃", 100], ["希腊酸奶", 100]], "kcal": 120, "p": 11.1, "f": 1.0, "c": 18.1}, {"id": "S7", "name": "蒸红薯（垫肚子）", "items": [["红薯", 100]], "kcal": 99, "p": 1.6, "f": 0.2, "c": 23.0}, {"id": "S8", "name": "蓝莓酸奶杯", "items": [["蓝莓", 80], ["希腊酸奶", 150]], "kcal": 134, "p": 16.0, "f": 0.8, "c": 17.0}], "T": [{"id": "T1", "name": "番茄豆腐蛋花汤", "items": [["番茄", 150], ["南豆腐", 100], ["鸡蛋", 50]], "how": "番茄炒软加水煮开，下豆腐，最后淋蛋液关火搅散。酸甜开胃，几乎零负担。", "kcal": 189, "p": 14.2, "f": 8.1, "c": 10.8}, {"id": "T2", "name": "冬瓜虾仁汤", "items": [["冬瓜", 200], ["虾仁", 80]], "how": "冬瓜煮软后下虾仁，变色即关火，加盐白胡椒。利水消肿，适合下午腿胀时。", "kcal": 103, "p": 20.0, "f": 0.6, "c": 5.4}, {"id": "T3", "name": "菌菇鸡丝汤", "items": [["鸡胸肉", 100], ["香菇", 100], ["金针菇", 80]], "how": "鸡胸整块冷水下锅煮10分钟撕丝，汤里下菌菇。一锅出，可当汤也可当菜。", "kcal": 185, "p": 23.5, "f": 5.6, "c": 12.5}, {"id": "T4", "name": "紫菜虾皮蛋花汤", "items": [["紫菜", 2], ["虾皮", 3], ["鸡蛋", 50]], "how": "碗里放紫菜虾皮，冲入沸水，淋蛋液。1分钟搞定，补钙补碘。", "kcal": 82, "p": 8.1, "f": 4.5, "c": 2.4}, {"id": "T5", "name": "海带豆腐汤", "items": [["海带", 150], ["北豆腐", 100]], "how": "海带切丝与豆腐同煮5分钟，加少许生抽。含碘和钙，清淡有饱腹感。", "kcal": 118, "p": 14.0, "f": 5.0, "c": 4.7}, {"id": "T6", "name": "娃娃菜豆腐汤", "items": [["娃娃菜", 200], ["北豆腐", 100]], "how": "娃娃菜煮软后加豆腐块再煮2分钟，只放盐和几滴香油。最简晚餐搭档。", "kcal": 132, "p": 15.2, "f": 5.0, "c": 7.9}], "Q": [{"id": "Q1", "name": "微波蛋羹+即食鸡胸", "items": [["鸡蛋", 100], ["即食鸡胸", 100], ["黄瓜", 100], ["全麦面包", 35]], "how": "蛋液加温水微波中火2分钟；即食鸡胸开袋即食，配黄瓜和面包。全程不开火。", "tag": "不开火", "kcal": 366, "p": 39.2, "f": 12.2, "c": 23.1}, {"id": "Q2", "name": "冷冻虾仁炒蛋盖饭", "items": [["虾仁", 100], ["鸡蛋", 100], ["米饭", 120], ["西兰花", 150], ["橄榄油", 3]], "how": "常备冷冻虾仁和冷冻西兰花，解冻后与蛋同炒，盖在加热的米饭上。10分钟出锅。", "tag": "10分钟", "kcal": 463, "p": 46.6, "f": 13.4, "c": 40.5}, {"id": "Q3", "name": "味噌豆腐汤+饭", "items": [["北豆腐", 150], ["米饭", 150], ["紫菜", 2], ["虾皮", 3]], "how": "味噌一勺化开，加豆腐紫菜虾皮煮开，配一碗饭。孩子闹腾时的救急餐。", "tag": "救急", "kcal": 331, "p": 23.7, "f": 7.7, "c": 42.1}, {"id": "Q4", "name": "隔夜燕麦杯（提前备）", "items": [["燕麦片", 35], ["希腊酸奶", 150], ["蓝莓", 50], ["核桃", 8]], "how": "睡前5分钟装杯冷藏，早上拿起来就走。适合娃早起闹人的早晨。", "tag": "提前备", "kcal": 301, "p": 22.2, "f": 7.8, "c": 35.7}, {"id": "Q5", "name": "全麦鸡肉卷", "items": [["全麦面包", 70], ["即食鸡胸", 100], ["生菜", 50], ["番茄", 50]], "how": "即食鸡胸撕条，全麦面包夹生菜番茄卷起。可单手吃，边带娃边解决。", "tag": "单手吃", "kcal": 310, "p": 29.4, "f": 4.6, "c": 35.8}, {"id": "Q6", "name": "番茄鸡蛋面（15分钟）", "items": [["荞麦面", 40], ["鸡蛋", 100], ["番茄", 150], ["娃娃菜", 100], ["橄榄油", 3]], "how": "番茄炒软煮汤下面，最后卧个蛋。一锅端，洗碗也省。", "tag": "一锅端", "kcal": 357, "p": 21.4, "f": 13.2, "c": 40.4}], "foods": {"鸡胸肉": [133, 19.4, 5.0, 2.5], "鸡蛋": [144, 13.3, 8.8, 2.8], "蛋清": [60, 11.6, 0.1, 3.1], "北豆腐": [98, 12.2, 4.8, 1.5], "南豆腐": [87, 6.2, 3.4, 3.4], "虾仁": [99, 24.0, 0.3, 0.2], "三文鱼": [139, 17.2, 7.8, 0.0], "鲈鱼": [105, 18.6, 3.4, 0.0], "巴沙鱼": [90, 15.0, 3.0, 0.0], "牛里脊": [106, 20.2, 2.3, 1.2], "猪里脊": [155, 20.2, 7.9, 0.7], "鸡腿去皮": [146, 18.0, 7.5, 0.0], "即食鸡胸": [120, 22.0, 2.0, 2.0], "牛奶": [54, 3.0, 3.2, 3.4], "无糖豆浆": [31, 3.0, 1.6, 1.2], "希腊酸奶": [59, 10.3, 0.4, 3.6], "蛋白粉": [380, 80.0, 5.0, 8.0], "虾皮": [153, 30.7, 2.2, 2.5], "米饭": [116, 2.6, 0.3, 25.9], "杂粮饭": [115, 3.0, 0.8, 24.0], "糙米饭": [112, 2.8, 0.9, 23.0], "燕麦片": [377, 15.0, 6.7, 61.6], "全麦面包": [246, 9.0, 3.3, 44.0], "红薯": [99, 1.6, 0.2, 23.0], "玉米": [112, 4.0, 1.2, 22.8], "大米": [346, 7.4, 0.8, 77.9], "小米": [361, 9.0, 3.1, 75.1], "荞麦面": [348, 13.0, 2.5, 71.0], "山药": [57, 1.9, 0.2, 12.4], "土豆": [87, 2.0, 0.1, 20.0], "西兰花": [36, 4.1, 0.6, 4.3], "菠菜": [28, 2.6, 0.3, 4.5], "生菜": [16, 1.3, 0.3, 2.0], "番茄": [20, 0.9, 0.2, 4.0], "小番茄": [25, 1.0, 0.2, 5.0], "黄瓜": [16, 0.8, 0.2, 2.9], "胡萝卜": [39, 1.0, 0.2, 8.8], "娃娃菜": [17, 1.5, 0.1, 3.2], "香菇": [26, 2.2, 0.3, 5.2], "芦笋": [22, 1.4, 0.1, 4.9], "秋葵": [37, 2.0, 0.1, 7.1], "青椒": [22, 1.4, 0.3, 5.4], "洋葱": [40, 1.1, 0.2, 9.0], "紫甘蓝": [31, 1.2, 0.2, 6.9], "金针菇": [32, 2.4, 0.4, 6.0], "豆芽": [18, 2.1, 0.1, 2.9], "冬瓜": [12, 0.4, 0.2, 2.6], "海带": [13, 1.2, 0.1, 2.1], "紫菜": [250, 26.7, 1.1, 44.1], "黑木耳": [265, 12.1, 1.5, 65.6], "苹果": [53, 0.4, 0.2, 13.5], "蓝莓": [57, 0.7, 0.3, 14.5], "香蕉": [93, 1.4, 0.2, 22.0], "柚子": [42, 0.8, 0.2, 9.5], "猕猴桃": [61, 0.8, 0.6, 14.5], "草莓": [32, 1.0, 0.2, 7.1], "核桃": [646, 14.9, 58.8, 19.1], "杏仁": [578, 21.0, 51.0, 22.0], "橄榄油": [899, 0.0, 99.9, 0.0], "香油": [898, 0.0, 99.7, 0.0], "花生": [589, 24.8, 44.3, 21.7], "芝麻酱": [630, 19.2, 52.7, 22.7]}, "weeks": {"A 周（鸡胸·虾·豆腐轮换）": [["B1", "L1", "D2", "S1"], ["B2", "L2", "D1", "S3"], ["B3", "L3", "D4", "S6"], ["B8", "L4", "D5", "S1"], ["B5", "L9", "D7", "S6"], ["B4", "L10", "D9", "S8"], ["B6", "L1", "D3", "S4"]], "B 周（鱼·牛·豆腐轮换）": [["B2", "L4", "D1", "S8"], ["B1", "L3", "D5", "S1"], ["B7", "L2", "D6", "S1"], ["B8", "L7", "D2", "S6"], ["B3", "L5", "D4", "S1"], ["B4", "L8", "D9", "S5"], ["B5", "L6", "D10", "S8"]], "C 周（快手·少油烟周）": [["B8", "Q2", "D7", "S1"], ["B4", "L9", "Q6", "S4"], ["B1", "Q1", "D9", "S3"], ["B2", "L10", "Q3", "S8"], ["B7", "L5", "D3", "S6"], ["B3", "Q5", "D2", "S2"], ["B6", "L1", "D7", "S1"]]}, "phases": [{"n": "阶段一 · 适应与基础", "w": "第 1–4 周", "d": "建立动作模式与运动习惯，低强度起步，把训练与饮食节奏跑通。重点学动作、不追求强度。"}, {"n": "阶段二 · 力量建立", "w": "第 5–8 周", "d": "用自体重或弹力带/小器械建立全身力量与稳定，打下后续进阶基础。"}, {"n": "阶段三 · 渐进超负荷", "w": "第 9–12 周", "d": "引入哑铃/壶铃或器械，逐步加重，刺激肌肉与力量持续增长。"}, {"n": "阶段四 · 巩固与精雕", "w": "第 13 周起", "d": "维持负荷，盯围度与体成分变化，达标后转维持热量防反弹。"}], "actions": [{"id": "pf", "name": "核心收紧（腹横肌）", "how": "呼气时肚脐轻收向脊柱（束腰感），不憋气，可配合呼吸节奏", "phase": "all"}, {"id": "catcow", "name": "猫牛式 Cat-Cow", "how": "四足位，吸气塌腰抬头、呼气弓背低头，配合呼吸活动脊柱", "phase": "all"}, {"id": "bridge", "name": "臀桥 Glute Bridge", "how": "仰卧夹臀顶髋至肩-髋-膝一线，不塌腰", "phase": "lower,full"}, {"id": "deadbug", "name": "死虫 Dead Bug", "how": "仰卧举腿屈膝，对侧手脚缓伸，腰贴地不塌", "phase": "all"}, {"id": "birddog", "name": "鸟狗式 Bird Dog", "how": "四足位对侧手脚伸出，骨盆稳不晃", "phase": "upper,full"}, {"id": "squat", "name": "徒手/高脚杯深蹲", "how": "臀后坐如坐椅，膝朝脚尖，起身夹臀", "phase": "lower,full"}, {"id": "side", "name": "侧卧抬腿", "how": "上方腿伸直慢抬，下方腰不塌", "phase": "lower,full"}, {"id": "row", "name": "弹力带划船", "how": "肘向后夹背，肩胛后缩，沉肩", "phase": "upper,full"}, {"id": "wallpu", "name": "靠墙俯卧撑", "how": "面对墙斜倾推墙，核心收紧不塌腰", "phase": "upper,full"}, {"id": "hipthrust", "name": "臀推 Hip Thrust", "how": "上背靠凳，顶髋夹臀成线", "phase": "lower,full"}, {"id": "rdl", "name": "罗马尼亚硬拉 RDL", "how": "微屈膝髋后移，背挺直，臀腿后侧发力", "phase": "lower,full"}, {"id": "ohp", "name": "哑铃推举 OHP", "how": "推至头顶，核心收紧不塌腰", "phase": "upper,full"}, {"id": "sabd", "name": "弹力带肩外展", "how": "站姿微屈髋，弹力带固定脚下，双臂体侧慢抬至肩高，不耸肩不塌腰", "phase": "upper,full"}, {"id": "step", "name": "踏步/台阶 Step-up", "how": "一脚踩稳凳或台阶，另一腿跟上不跳，控制下落，膝朝脚尖", "phase": "lower,full"}, {"id": "walk", "name": "快走/低冲击有氧", "how": "心率微升、能正常说话，20-40分钟", "phase": "all"}, {"id": "bench", "name": "杠铃卧推 Bench Press", "how": "杠铃慢放至胸，推起时夹胸收肩胛，核心收紧不塌腰", "phase": "gym,push"}, {"id": "incline_db", "name": "上斜哑铃卧推", "how": "凳调30-45°，哑铃推至胸上方，不耸肩不弹震", "phase": "gym,push"}, {"id": "pecdeck", "name": "器械夹胸 / 龙门架夹胸", "how": "手肘微屈，发力夹向胸前，顶峰停顿1秒", "phase": "gym,push"}, {"id": "tri_push", "name": "绳索三头下压", "how": "大臂贴身，小臂下压至伸直，不甩肩", "phase": "gym,push"}, {"id": "dip_assist", "name": "助力双杠臂屈伸", "how": "踏板上机，身体微前倾练胸、直立练三头，肘不超伸", "phase": "gym,push"}, {"id": "db_ohp", "name": "哑铃肩上推举", "how": "哑铃推至头顶，核心收不塌腰，不耸肩", "phase": "gym,push"}, {"id": "lateral", "name": "哑铃侧平举", "how": "微屈肘体侧抬至肩高，不耸肩不借力甩", "phase": "gym,push"}, {"id": "lat", "name": "高位下拉 Lat Pulldown", "how": "握距略宽于肩，拉至锁骨，沉肩不耸，背阔主导", "phase": "gym,pull"}, {"id": "cable_row", "name": "坐姿绳索划船", "how": "挺胸收腹，拉至腹肌，肩胛后缩，不圆肩", "phase": "gym,pull"}, {"id": "bb_row", "name": "杠铃划船", "how": "髋铰链微前倾，拉杠至腹，背挺直不圆背", "phase": "gym,pull"}, {"id": "curl", "name": "哑铃/杠铃弯举", "how": "大臂贴身固定，弯举至肩前，慢落不甩", "phase": "gym,pull"}, {"id": "facepull", "name": "面拉 Face Pull", "how": "绳索对脸拉至额前，外旋肩外展，改善圆肩", "phase": "gym,pull"}, {"id": "pullup_assist", "name": "助力引体向上", "how": "踏板上机，拉至下巴过杠，慢落控速", "phase": "gym,pull"}, {"id": "reardelt", "name": "反向飞鸟 / 反向蝴蝶机", "how": "俯身或面机，后束主导外展，不甩重量", "phase": "gym,pull"}, {"id": "bb_squat", "name": "杠铃深蹲 Back Squat", "how": "杠落肩胛，髋膝同开，蹲至大腿平行，核心全程收紧", "phase": "gym,leg"}, {"id": "legpress", "name": "腿举 Leg Press", "how": "脚踩踏板略宽，膝朝脚尖，不塌腰不锁死", "phase": "gym,leg"}, {"id": "legcurl", "name": "俯卧腿弯举", "how": "勾脚至最大，慢放，腘绳主导", "phase": "gym,leg"}, {"id": "calf", "name": "站姿提踵 Calf Raise", "how": "踮脚至顶停顿1秒，慢落拉伸", "phase": "gym,leg"}], "templates": {"基础激活日": ["pf", "catcow", "bridge", "deadbug", "walk"], "下肢日": ["bridge", "squat", "side", "hipthrust", "step", "walk"], "上肢日": ["birddog", "row", "wallpu", "sabd", "pf", "walk"], "全身日": ["squat", "row", "bridge", "birddog", "pf", "walk"], "有氧恢复日": ["walk", "catcow", "pf"], "胸·三头（器械/哑铃）": ["bench", "incline_db", "pecdeck", "tri_push"], "背·二头（器械/杠铃）": ["lat", "cable_row", "bb_row", "curl", "facepull"], "腿·臀（杠铃/器械）": ["bb_squat", "legpress", "rdl", "legcurl", "calf"], "肩·臂（哑铃/器械）": ["db_ohp", "lateral", "reardelt", "curl", "facepull"], "全身复合（器械）": ["legpress", "bench", "lat", "lateral", "walk"], "上肢推力（杠铃·进阶）": ["bench", "db_ohp", "dip_assist", "tri_push"], "上肢拉力（进阶）": ["pullup_assist", "cable_row", "curl", "facepull"], "放松恢复日": ["catcow", "pf", "deadbug", "bridge", "walk"], "灵活性·泡沫轴放松": ["catcow", "bridge", "deadbug", "sabd", "walk"], "低强度有氧恢复": ["walk", "catcow", "pf"]}, "templateMeta": {"基础激活日": {"cat": "居家训练", "stage": "基础"}, "下肢日": {"cat": "居家训练", "stage": "基础"}, "上肢日": {"cat": "居家训练", "stage": "基础"}, "全身日": {"cat": "居家训练", "stage": "基础"}, "有氧恢复日": {"cat": "居家训练", "stage": "基础"}, "胸·三头（器械/哑铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "背·二头（器械/杠铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "腿·臀（杠铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "肩·臂（哑铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "全身复合（器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "上肢推力（杠铃·进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "上肢拉力（进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "放松恢复日": {"cat": "体能恢复", "stage": "基础"}, "灵活性·泡沫轴放松": {"cat": "体能恢复", "stage": "基础"}, "低强度有氧恢复": {"cat": "体能恢复", "stage": "基础"}}, "templateGroups": {"居家训练": {"基础激活日": {"stage": "基础", "acts": ["pf", "catcow", "bridge", "deadbug", "walk"]}, "下肢日": {"stage": "基础", "acts": ["bridge", "squat", "side", "hipthrust", "step", "walk"]}, "上肢日": {"stage": "基础", "acts": ["birddog", "row", "wallpu", "sabd", "pf", "walk"]}, "全身日": {"stage": "基础", "acts": ["squat", "row", "bridge", "birddog", "pf", "walk"]}, "有氧恢复日": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}, "健身房力量训练": {"胸·三头（器械/哑铃）": {"stage": "进阶", "acts": ["bench", "incline_db", "pecdeck", "tri_push"]}, "背·二头（器械/杠铃）": {"stage": "进阶", "acts": ["lat", "cable_row", "bb_row", "curl", "facepull"]}, "腿·臀（杠铃/器械）": {"stage": "进阶", "acts": ["bb_squat", "legpress", "rdl", "legcurl", "calf"]}, "肩·臂（哑铃/器械）": {"stage": "进阶", "acts": ["db_ohp", "lateral", "reardelt", "curl", "facepull"]}, "全身复合（器械）": {"stage": "进阶", "acts": ["legpress", "bench", "lat", "lateral", "walk"]}, "上肢推力（杠铃·进阶）": {"stage": "待解锁", "acts": ["bench", "db_ohp", "dip_assist", "tri_push"]}, "上肢拉力（进阶）": {"stage": "待解锁", "acts": ["pullup_assist", "cable_row", "curl", "facepull"]}}, "体能恢复": {"放松恢复日": {"stage": "基础", "acts": ["catcow", "pf", "deadbug", "bridge", "walk"]}, "灵活性·泡沫轴放松": {"stage": "基础", "acts": ["catcow", "bridge", "deadbug", "sabd", "walk"]}, "低强度有氧恢复": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}}};
+const PLAN={"phases": [{"n": "阶段一 · 适应与基础", "w": "第 1–4 周", "d": "建立动作模式与运动习惯，低强度起步，把训练与饮食节奏跑通。重点学动作、不追求强度。"}, {"n": "阶段二 · 力量建立", "w": "第 5–8 周", "d": "用自体重或弹力带/小器械建立全身力量与稳定，打下后续进阶基础。"}, {"n": "阶段三 · 渐进超负荷", "w": "第 9–12 周", "d": "引入哑铃/壶铃或器械，逐步加重，刺激肌肉与力量持续增长。"}, {"n": "阶段四 · 巩固与精雕", "w": "第 13 周起", "d": "维持负荷，盯围度与体成分变化，达标后转维持热量防反弹。"}], "actions": [{"id": "pf", "name": "核心收紧（腹横肌）", "how": "呼气时肚脐轻收向脊柱（束腰感），不憋气，可配合呼吸节奏", "phase": "all"}, {"id": "catcow", "name": "猫牛式 Cat-Cow", "how": "四足位，吸气塌腰抬头、呼气弓背低头，配合呼吸活动脊柱", "phase": "all"}, {"id": "bridge", "name": "臀桥 Glute Bridge", "how": "仰卧夹臀顶髋至肩-髋-膝一线，不塌腰", "phase": "lower,full"}, {"id": "deadbug", "name": "死虫 Dead Bug", "how": "仰卧举腿屈膝，对侧手脚缓伸，腰贴地不塌", "phase": "all"}, {"id": "birddog", "name": "鸟狗式 Bird Dog", "how": "四足位对侧手脚伸出，骨盆稳不晃", "phase": "upper,full"}, {"id": "squat", "name": "徒手/高脚杯深蹲", "how": "臀后坐如坐椅，膝朝脚尖，起身夹臀", "phase": "lower,full"}, {"id": "side", "name": "侧卧抬腿", "how": "上方腿伸直慢抬，下方腰不塌", "phase": "lower,full"}, {"id": "row", "name": "弹力带划船", "how": "肘向后夹背，肩胛后缩，沉肩", "phase": "upper,full"}, {"id": "wallpu", "name": "靠墙俯卧撑", "how": "面对墙斜倾推墙，核心收紧不塌腰", "phase": "upper,full"}, {"id": "hipthrust", "name": "臀推 Hip Thrust", "how": "上背靠凳，顶髋夹臀成线", "phase": "lower,full"}, {"id": "rdl", "name": "罗马尼亚硬拉 RDL", "how": "微屈膝髋后移，背挺直，臀腿后侧发力", "phase": "lower,full"}, {"id": "ohp", "name": "哑铃推举 OHP", "how": "推至头顶，核心收紧不塌腰", "phase": "upper,full"}, {"id": "sabd", "name": "弹力带肩外展", "how": "站姿微屈髋，弹力带固定脚下，双臂体侧慢抬至肩高，不耸肩不塌腰", "phase": "upper,full"}, {"id": "step", "name": "踏步/台阶 Step-up", "how": "一脚踩稳凳或台阶，另一腿跟上不跳，控制下落，膝朝脚尖", "phase": "lower,full"}, {"id": "walk", "name": "快走/低冲击有氧", "how": "心率微升、能正常说话，20-40分钟", "phase": "all"}, {"id": "bench", "name": "杠铃卧推 Bench Press", "how": "杠铃慢放至胸，推起时夹胸收肩胛，核心收紧不塌腰", "phase": "gym,push"}, {"id": "incline_db", "name": "上斜哑铃卧推", "how": "凳调30-45°，哑铃推至胸上方，不耸肩不弹震", "phase": "gym,push"}, {"id": "pecdeck", "name": "器械夹胸 / 龙门架夹胸", "how": "手肘微屈，发力夹向胸前，顶峰停顿1秒", "phase": "gym,push"}, {"id": "tri_push", "name": "绳索三头下压", "how": "大臂贴身，小臂下压至伸直，不甩肩", "phase": "gym,push"}, {"id": "dip_assist", "name": "助力双杠臂屈伸", "how": "踏板上机，身体微前倾练胸、直立练三头，肘不超伸", "phase": "gym,push"}, {"id": "db_ohp", "name": "哑铃肩上推举", "how": "哑铃推至头顶，核心收不塌腰，不耸肩", "phase": "gym,push"}, {"id": "lateral", "name": "哑铃侧平举", "how": "微屈肘体侧抬至肩高，不耸肩不借力甩", "phase": "gym,push"}, {"id": "lat", "name": "高位下拉 Lat Pulldown", "how": "握距略宽于肩，拉至锁骨，沉肩不耸，背阔主导", "phase": "gym,pull"}, {"id": "cable_row", "name": "坐姿绳索划船", "how": "挺胸收腹，拉至腹肌，肩胛后缩，不圆肩", "phase": "gym,pull"}, {"id": "bb_row", "name": "杠铃划船", "how": "髋铰链微前倾，拉杠至腹，背挺直不圆背", "phase": "gym,pull"}, {"id": "curl", "name": "哑铃/杠铃弯举", "how": "大臂贴身固定，弯举至肩前，慢落不甩", "phase": "gym,pull"}, {"id": "facepull", "name": "面拉 Face Pull", "how": "绳索对脸拉至额前，外旋肩外展，改善圆肩", "phase": "gym,pull"}, {"id": "pullup_assist", "name": "助力引体向上", "how": "踏板上机，拉至下巴过杠，慢落控速", "phase": "gym,pull"}, {"id": "reardelt", "name": "反向飞鸟 / 反向蝴蝶机", "how": "俯身或面机，后束主导外展，不甩重量", "phase": "gym,pull"}, {"id": "bb_squat", "name": "杠铃深蹲 Back Squat", "how": "杠落肩胛，髋膝同开，蹲至大腿平行，核心全程收紧", "phase": "gym,leg"}, {"id": "legpress", "name": "腿举 Leg Press", "how": "脚踩踏板略宽，膝朝脚尖，不塌腰不锁死", "phase": "gym,leg"}, {"id": "legcurl", "name": "俯卧腿弯举", "how": "勾脚至最大，慢放，腘绳主导", "phase": "gym,leg"}, {"id": "calf", "name": "站姿提踵 Calf Raise", "how": "踮脚至顶停顿1秒，慢落拉伸", "phase": "gym,leg"}], "templates": {"基础激活日": ["pf", "catcow", "bridge", "deadbug", "walk"], "下肢日": ["bridge", "squat", "side", "hipthrust", "step", "walk"], "上肢日": ["birddog", "row", "wallpu", "sabd", "pf", "walk"], "全身日": ["squat", "row", "bridge", "birddog", "pf", "walk"], "有氧恢复日": ["walk", "catcow", "pf"], "胸·三头（器械/哑铃）": ["bench", "incline_db", "pecdeck", "tri_push"], "背·二头（器械/杠铃）": ["lat", "cable_row", "bb_row", "curl", "facepull"], "腿·臀（杠铃/器械）": ["bb_squat", "legpress", "rdl", "legcurl", "calf"], "肩·臂（哑铃/器械）": ["db_ohp", "lateral", "reardelt", "curl", "facepull"], "全身复合（器械）": ["legpress", "bench", "lat", "lateral", "walk"], "上肢推力（杠铃·进阶）": ["bench", "db_ohp", "dip_assist", "tri_push"], "上肢拉力（进阶）": ["pullup_assist", "cable_row", "curl", "facepull"], "放松恢复日": ["catcow", "pf", "deadbug", "bridge", "walk"], "灵活性·泡沫轴放松": ["catcow", "bridge", "deadbug", "sabd", "walk"], "低强度有氧恢复": ["walk", "catcow", "pf"]}, "templateMeta": {"基础激活日": {"cat": "居家训练", "stage": "基础"}, "下肢日": {"cat": "居家训练", "stage": "基础"}, "上肢日": {"cat": "居家训练", "stage": "基础"}, "全身日": {"cat": "居家训练", "stage": "基础"}, "有氧恢复日": {"cat": "居家训练", "stage": "基础"}, "胸·三头（器械/哑铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "背·二头（器械/杠铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "腿·臀（杠铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "肩·臂（哑铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "全身复合（器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "上肢推力（杠铃·进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "上肢拉力（进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "放松恢复日": {"cat": "体能恢复", "stage": "基础"}, "灵活性·泡沫轴放松": {"cat": "体能恢复", "stage": "基础"}, "低强度有氧恢复": {"cat": "体能恢复", "stage": "基础"}}, "templateGroups": {"居家训练": {"基础激活日": {"stage": "基础", "acts": ["pf", "catcow", "bridge", "deadbug", "walk"]}, "下肢日": {"stage": "基础", "acts": ["bridge", "squat", "side", "hipthrust", "step", "walk"]}, "上肢日": {"stage": "基础", "acts": ["birddog", "row", "wallpu", "sabd", "pf", "walk"]}, "全身日": {"stage": "基础", "acts": ["squat", "row", "bridge", "birddog", "pf", "walk"]}, "有氧恢复日": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}, "健身房力量训练": {"胸·三头（器械/哑铃）": {"stage": "进阶", "acts": ["bench", "incline_db", "pecdeck", "tri_push"]}, "背·二头（器械/杠铃）": {"stage": "进阶", "acts": ["lat", "cable_row", "bb_row", "curl", "facepull"]}, "腿·臀（杠铃/器械）": {"stage": "进阶", "acts": ["bb_squat", "legpress", "rdl", "legcurl", "calf"]}, "肩·臂（哑铃/器械）": {"stage": "进阶", "acts": ["db_ohp", "lateral", "reardelt", "curl", "facepull"]}, "全身复合（器械）": {"stage": "进阶", "acts": ["legpress", "bench", "lat", "lateral", "walk"]}, "上肢推力（杠铃·进阶）": {"stage": "待解锁", "acts": ["bench", "db_ohp", "dip_assist", "tri_push"]}, "上肢拉力（进阶）": {"stage": "待解锁", "acts": ["pullup_assist", "cable_row", "curl", "facepull"]}}, "体能恢复": {"放松恢复日": {"stage": "基础", "acts": ["catcow", "pf", "deadbug", "bridge", "walk"]}, "灵活性·泡沫轴放松": {"stage": "基础", "acts": ["catcow", "bridge", "deadbug", "sabd", "walk"]}, "低强度有氧恢复": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}}};
+
+function freshData(){
+  return {
+    profile:{gender:"女",age:30,height:165,weightStart:60,weightGoal:55},
+    targets:{calories:1500,protein:100,fat:50,carbs:150},
+    activity:1.375,
+    weights:[],trainings:[],diets:{},photos:[],customActions:[],trash:[],
+    templates:JSON.parse(JSON.stringify(PLAN.templates)),
+    templateMeta:JSON.parse(JSON.stringify(PLAN.templateMeta))
+  };
+}
+function mergeData(d){
+  const base=freshData();
+  const m=Object.assign({},base,d||{});
+  m.targets=Object.assign({},base.targets,(d&&d.targets)||{});
+  m.profile=Object.assign({},base.profile,(d&&d.profile)||{});
+  if(!m.templates||!Object.keys(m.templates).length)m.templates=JSON.parse(JSON.stringify(PLAN.templates));
+  // 回填默认模板中缺失的（含新增的健身房/恢复模板），不覆盖用户已有编辑
+  Object.keys(PLAN.templates).forEach(function(n){ if(!m.templates[n])m.templates[n]=PLAN.templates[n].slice(); });
+  if(!m.templateMeta)m.templateMeta={};
+  Object.keys(PLAN.templateMeta).forEach(function(n){ if(!m.templateMeta[n])m.templateMeta[n]=JSON.parse(JSON.stringify(PLAN.templateMeta[n])); });
+  if(!Array.isArray(m.customActions))m.customActions=[];
+  if(!Array.isArray(m.trash))m.trash=[];
+  return m;
+}
+function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function freshRoot(){
+  const id="p1";
+  return {active:id, profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:freshData()}}};
+}
+function load(){
+  try{
+    let raw=localStorage.getItem(DB_KEY);
+    if(!raw){
+      const old=localStorage.getItem("ppf_v2");
+      if(old){try{const d=JSON.parse(old);if(d&&d.profiles)return d;if(d){const id="p1";return {active:id,profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:mergeData(d)}}};}}catch(e){}}
+      return freshRoot();
+    }
+    const parsed=JSON.parse(raw);
+    if(!parsed||!parsed.profiles){const id="p1";return {active:id,profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:mergeData(parsed)}}};}
+    Object.values(parsed.profiles).forEach(p=>{p.data=mergeData(p.data);});
+    if(!parsed.profiles[parsed.active])parsed.active=Object.keys(parsed.profiles)[0];
+    return parsed;
+  }catch(e){storageOK=false;return freshRoot();}
+}
+function save(){try{localStorage.setItem(DB_KEY,JSON.stringify(ROOT));storageOK=true;}catch(e){storageOK=false;}}
+
+let storageOK=true;
+let ROOT=load();
+let DB=ROOT.profiles[ROOT.active].data;
+
+function todayStr(d){d=d||new Date();const p=n=>(""+n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate());}
+function $(id){return document.getElementById(id);}
+function esc(s){return (s==null?"":""+s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function getAct(id){return PLAN.actions.find(a=>a.id===id)||(DB.customActions||[]).find(a=>a.id===id)||null;}
+function allActions(){return PLAN.actions.concat(DB.customActions||[]);}
+
+/* ---------- 档案（多 profile） ---------- */
+function colorFor(name){
+  const palette=['#ff7a8a','#7c83ff','#36c5a8','#ffa94d','#5ec5f0','#b388ff','#ff6b6b','#4dd4ac','#f6a609','#9b8cff'];
+  let h=0; for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;
+  return palette[h%palette.length];
+}
+function avatarLabel(name){return (name||'?').trim().charAt(0).toUpperCase();}
+function renderAvatars(){
+  const el=$("pf_avatars"); if(!el)return; const cur=ROOT.active;
+  let html=Object.values(ROOT.profiles).map(p=>{
+    const c=colorFor(p.name);
+    return `<div class="avatar${p.id===cur?' active':''}" style="background:linear-gradient(135deg,${c},${c}cc)" onclick="switchProfile('${p.id}')" title="${esc(p.name)}">${avatarLabel(p.name)}</div>`;
+  }).join("");
+  html+=`<div class="avatar add" onclick="showPage('profiles')" title="管理档案 / 新建"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:block"><rect x="10" y="4" width="4" height="16" rx="1"/><rect x="4" y="10" width="16" height="4" rx="1"/></svg></div>`;
+  el.innerHTML=html;
+}
+function renderPfList(){
+  const el=$("pf_list"); if(!el)return;
+  const ids=Object.keys(ROOT.profiles);
+  el.innerHTML=Object.values(ROOT.profiles).map(p=>{
+    const c=colorFor(p.name),pr=p.data.profile,act=p.id===ROOT.active;
+    const tag=`${pr.gender||'?'} ${pr.age||'—'}岁${pr.height?' · '+pr.height+'cm':''} → ${pr.weightGoal||'?'}kg`;
+    return `<div class="pf-row${act?' active':''}">
+      <div class="avatar" style="background:linear-gradient(135deg,${c},${c}cc);cursor:default">${avatarLabel(p.name)}</div>
+      <div class="pf-meta"><div class="pf-name">${esc(p.name)}${act?' <span class="cur-tag">当前</span>':''}</div><div class="pf-sub">${tag}</div></div>
+      <div class="pf-ops">${act?'':`<button class="mini-btn" onclick="switchProfile('${p.id}')">切换</button>`}<button class="mini-btn" onclick="editProfileName('${p.id}')">改名</button>${ids.length>1?`<button class="mini-btn del" onclick="delProfileById('${p.id}')">删除</button>`:''}</div>
+    </div>`;
+  }).join("");
+}
+function editProfileName(id){
+  const nm=prompt("修改档案名：",ROOT.profiles[id].name);
+  if(nm&&nm.trim()){ROOT.profiles[id].name=nm.trim();save();renderProfiles();renderAll();}
+}
+function delProfileById(id){
+  const ids=Object.keys(ROOT.profiles);
+  if(ids.length<=1){alert("至少保留一个档案，无法删除。");return;}
+  if(!confirm("删除档案「"+ROOT.profiles[id].name+"」及其全部数据？此操作不可恢复。"))return;
+  delete ROOT.profiles[id];
+  if(ROOT.active===id){ROOT.active=ids.find(k=>k!==id);DB=ROOT.profiles[ROOT.active].data;}
+  save();renderProfiles();renderAll();
+}
+function renderProfiles(){
+  renderAvatars();renderPfList();
+  const p=ROOT.profiles[ROOT.active];
+  $("pf_cur_name").textContent=p.name;
+  $("pf_info_name").value=p.name;
+  $("pf_gender").value=p.data.profile.gender;
+  $("pf_age").value=p.data.profile.age;
+  $("pf_height").value=p.data.profile.height;
+  $("pf_ws").value=p.data.profile.weightStart;
+  $("pf_wg").value=p.data.profile.weightGoal;
+  $("pf_act").value=p.data.activity;
+  $("pf_cal").value=p.data.targets.calories;
+  $("pf_pro").value=p.data.targets.protein;
+  $("pf_fat").value=p.data.targets.fat;
+  $("pf_carb").value=p.data.targets.carbs;
+}
+function switchProfile(id){if(!id||!ROOT.profiles[id])return;ROOT.active=id;DB=ROOT.profiles[id].data;save();renderAll();}
+function newProfile(){
+  const nm=($("np_name").value||"").trim();
+  if(!nm){alert("请填写档案名");return;}
+  const id=uid();
+  ROOT.profiles[id]={id:id,name:nm,createdAt:todayStr(),data:freshData()};
+  ROOT.active=id;DB=ROOT.profiles[id].data;save();
+  $("np_name").value="";
+  renderProfiles();renderAll();
+}
+function saveProfileInfo(){
+  const p=ROOT.profiles[ROOT.active];
+  const nm=($("pf_info_name").value||"").trim();if(nm)p.name=nm;
+  p.data.profile.gender=$("pf_gender").value;
+  p.data.profile.age=parseInt($("pf_age").value)||30;
+  p.data.profile.height=parseFloat($("pf_height").value)||165;
+  p.data.profile.weightStart=parseFloat($("pf_ws").value)||60;
+  p.data.profile.weightGoal=parseFloat($("pf_wg").value)||55;
+  p.data.activity=parseFloat($("pf_act").value)||1.375;
+  p.data.targets.calories=parseInt($("pf_cal").value)||1500;
+  p.data.targets.protein=parseInt($("pf_pro").value)||100;
+  p.data.targets.fat=parseInt($("pf_fat").value)||50;
+  p.data.targets.carbs=parseInt($("pf_carb").value)||150;
+  save();renderProfiles();renderAll();
+  $("d_msg").textContent="档案信息已保存。";
+}
+function autoCalcTargets(){
+  const p=ROOT.profiles[ROOT.active];
+  const gender=$("pf_gender").value;
+  const age=parseInt($("pf_age").value)||30;
+  const height=parseFloat($("pf_height").value)||165;
+  if(!gender||!height||!age){alert("请先填写性别、年龄、身高再自动计算。");return;}
+  const w=p.data.weights.length?p.data.weights[p.data.weights.length-1].weight:parseFloat($("pf_ws").value)||p.data.profile.weightStart;
+  const act=parseFloat($("pf_act").value)||1.375;
+  const bmr=Math.round(10*w+6.25*height-5*age+(gender==="男"?5:-161));
+  const tdee=Math.round(bmr*act),deficit=450;
+  const cal=Math.round(tdee-deficit);
+  const pro=Math.round(2.0*w);
+  const fat=Math.round((tdee*0.25)/9);
+  const carb=Math.max(0,Math.round((cal-pro*4-fat*9)/4));
+  $("pf_cal").value=cal;$("pf_pro").value=pro;$("pf_fat").value=fat;$("pf_carb").value=carb;
+  saveProfileInfo();
+  $("d_msg").textContent=`已按 ${gender} ${age}岁 身高${height}cm 当前${w}kg 系数${act} 自动计算并保存：摄入 ${cal}kcal｜蛋白${pro}g 脂肪${fat}g 碳水${carb}g（缺口约${deficit}）。`;
+}
+function delProfile(){
+  const ids=Object.keys(ROOT.profiles);
+  if(ids.length<=1){alert("至少保留一个档案，无法删除。");return;}
+  if(!confirm("删除当前档案「"+ROOT.profiles[ROOT.active].name+"」及其全部数据？此操作不可恢复。"))return;
+  delete ROOT.profiles[ROOT.active];
+  ROOT.active=Object.keys(ROOT.profiles)[0];
+  DB=ROOT.profiles[ROOT.active].data;save();
+  renderProfiles();renderAll();
+}
+function renderAll(){updateHeader();renderToday();renderWeight();renderTrain();renderDiet();renderProgress();renderData();renderRef();renderTrash();renderProfiles();}
+function updateHeader(){$("hd").textContent="每日目标 "+DB.targets.calories+" kcal ｜ 蛋白"+DB.targets.protein+" / 脂肪"+DB.targets.fat+" / 碳水"+DB.targets.carbs+" g";}
+
+/* ---------- TDEE 计算 ---------- */
+function calcBMR(w){const p=DB.profile;return Math.round(10*w+6.25*p.height-5*p.age+(p.gender==="男"?5:-161));}
+function calcTDEE(bmr){return Math.round(bmr*DB.activity);}
+function recoIntake(tdee){const deficit=450;return {cal:Math.round(tdee-deficit),pro:Math.round(2.0*(DB.weights.length?DB.weights[DB.weights.length-1].weight:DB.profile.weightStart))};}
+
+function showPage(p){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("nav").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.p===p));$(p).classList.add("active");
+  if(p==="today")renderToday();if(p==="weight")renderWeight();if(p==="train")renderTrain();if(p==="diet")renderDiet();if(p==="progress")renderProgress();if(p==="ref")renderRef();if(p==="data")renderData();if(p==="profiles")renderProfiles();if(p==="trash")renderTrash();}
+
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.p));
+
+/* ---------- 今日 ---------- */
+function renderToday(){
+  const last=DB.weights[DB.weights.length-1];
+  const cur=last?last.weight:DB.profile.weightStart;
+  const remain=(cur-DB.profile.weightGoal);
+  $("t_remain").textContent=remain>0?remain.toFixed(1):"0.0";
+  const start=DB.profile.weightStart, goal=DB.profile.weightGoal;
+  const total=start-goal, done=start-cur;
+  $("t_progress").textContent="已减 "+done.toFixed(1)+"kg / 共 "+total.toFixed(1)+"kg（"+(total>0?(done/total*100).toFixed(0):0)+"%）";
+  const d=DB.diets[todayStr()]||{meals:[]};
+  let k=0,p=0,f=0,c=0;d.meals.forEach(m=>{k+=m.kcal||0;p+=m.p||0;f+=m.f||0;c+=m.c||0;});
+  const t=DB.targets;
+  const bar=(val,tg,cls,unit)=>{const pct=Math.min(100,val/tg*100);return `<div class="bar ${cls}"><i style="width:${pct}%"></i></div><div class="metric"><span>${val.toFixed(0)} ${unit}</span><span>目标 ${tg}${unit} · ${pct.toFixed(0)}%</span></div>`;};
+  $("t_diet").innerHTML=`<div class="muted">热量</div>${bar(k,t.calories,"","kcal")}
+    <div class="muted" style="margin-top:6px">蛋白质</div>${bar(p,t.protein,"p","g")}
+    <div class="muted" style="margin-top:6px">脂肪</div>${bar(f,t.fat,"f","g")}
+    <div class="muted" style="margin-top:6px">碳水</div>${bar(c,t.carbs,"c","g")}`;
+  const tr=DB.trainings.filter(x=>x.date===todayStr());
+  if(tr.length){const x=tr[tr.length-1];const done=x.items.filter(i=>i.done).length;$("t_train").innerHTML=`<div class="muted">${x.template||"训练"} · 已完成 ${done}/${x.items.length} 个动作 · RPE ${x.rpe||"-"}</div><div style="margin-top:6px">${x.items.map(i=>`<span class="bd">${i.done?"✓ ":"○ "}${esc(i.name)}</span>`).join("")}</div>`;}
+  else $("t_train").innerHTML='<div class="empty">今天还没训练打卡 →</div>';
+}
+function quickWeight(){$("nav").querySelector('[data-p=weight]').click();}
+
+/* ---------- 体重 ---------- */
+function renderWeight(){
+  $("w_date").value=todayStr();
+  let rows=DB.weights.slice().reverse().map(w=>`<div class="hist"><span class="hbody"><b>${w.date}</b> ｜ 体重 ${w.weight}kg${w.waist?" ｜ 腰 "+w.waist+"cm":""}${w.hip?" ｜ 臀 "+w.hip+"cm":""}${w.note?" ｜ "+esc(w.note):""}</span><button class="delete" onclick="delWeight('${w.date}')">删除</button></div>`).join("");
+  $("w_list").innerHTML=rows||'<div class="empty">还没有记录</div>';
+  drawWeight();
+  renderPhoto();
+  recoTip();
+}
+function saveWeight(){
+  const date=$("w_date").value||todayStr();
+  const w=parseFloat($("w_w").value);if(!w){alert("请填写体重");return;}
+  const obj={date,weight:w,waist:parseFloat($("w_waist").value)||null,hip:parseFloat($("w_hip").value)||null,note:$("w_note").value.trim()};
+  const i=DB.weights.findIndex(x=>x.date===date);
+  if(i>=0)DB.weights[i]=obj;else DB.weights.push(obj);
+  DB.weights.sort((a,b)=>a.date<b.date?-1:1);save();
+  $("w_w").value="";$("w_waist").value="";$("w_hip").value="";$("w_note").value="";
+  renderWeight();renderToday();
+}
+function trashPush(type,data){DB.trash.push({uid:Date.now()+"_"+Math.random().toString(36).slice(2,8),type,data,deletedAt:todayStr()});if(DB.trash.length>200)DB.trash.shift();}
+function restoreTrash(uid){const i=DB.trash.findIndex(t=>t.uid===uid);if(i<0)return;const t=DB.trash[i];if(t.type==="weight"){DB.weights.push(t.data);DB.weights.sort((a,b)=>a.date<b.date?-1:1);}else if(t.type==="train"){DB.trainings.push(t.data);DB.trainings.sort((a,b)=>a.date<b.date?-1:1);}else if(t.type==="photo"){DB.photos.push(t.data);}else if(t.type==="meal"){const dt=t.data.date;if(!DB.diets[dt])DB.diets[dt]={meals:[]};DB.diets[dt].meals.push(t.data.meal);}DB.trash.splice(i,1);save();renderTrash();renderWeight();renderTrain();renderDiet();renderPhoto();renderProgress();renderToday();}
+function purgeTrashItem(uid){if(!confirm("彻底删除？此操作不可恢复"))return;DB.trash=DB.trash.filter(t=>t.uid!==uid);save();renderTrash();}
+function emptyTrash(){if(!confirm("清空回收站？所有记录将永久删除"))return;DB.trash=[];save();renderTrash();}
+function batchDelete(){const type=$("bd_type").value;const cut=$("bd_date").value;if(!cut){alert("请选择截止日期");return;}let moved=0;if(type==="weight"){DB.weights=DB.weights.filter(w=>{if(w.date<=cut){trashPush("weight",w);moved++;return false;}return true;});}else if(type==="train"){DB.trainings=DB.trainings.filter(x=>{if(x.date<=cut){trashPush("train",x);moved++;return false;}return true;});}else if(type==="photo"){DB.photos=DB.photos.filter(p=>{if(p.date<=cut){trashPush("photo",p);moved++;return false;}return true;});}else if(type==="meal"){Object.keys(DB.diets).forEach(dt=>{if(dt<=cut){DB.diets[dt].meals.forEach(m=>trashPush("meal",{date:dt,meal:m}));moved+=DB.diets[dt].meals.length;delete DB.diets[dt];}});}save();renderTrash();renderWeight();renderTrain();renderDiet();renderPhoto();renderProgress();renderToday();if(moved)alert("已删除 "+moved+" 条，可在回收站还原");else alert("没有符合条件的记录");}
+function renderTrash(){$("bd_date").value=$("bd_date").value||todayStr();const L={weight:"体重",train:"训练",photo:"照片",meal:"饮食餐"};if(!DB.trash.length){$("trash_list").innerHTML='<div class="empty">回收站是空的</div>';return;}$("trash_list").innerHTML=DB.trash.slice().reverse().map(t=>{let d="";if(t.type==="weight")d=t.data.date+" 体重 "+t.data.weight+"kg";else if(t.type==="train")d=t.data.date+" "+(t.data.template||"训练")+" ("+t.data.items.length+"动作)";else if(t.type==="photo")d=t.data.date+" 照片";else if(t.type==="meal")d=t.data.date+" 饮食: "+(t.data.meal&&t.data.meal.name);return '<div class="hist"><span class="hbody"><b>'+(L[t.type]||t.type)+'</b> ｜ '+esc(d)+' ｜ 删于 '+t.deletedAt+'</span> <button class="act2" onclick="restoreTrash(\''+t.uid+'\')">还原</button> <button class="delete" onclick="purgeTrashItem(\''+t.uid+'\')">彻底删</button></div>';}).join("");}
+function delWeight(date){if(!confirm("删除 "+date+" 的体重记录？可到「回收站」恢复"))return;const it=DB.weights.find(x=>x.date===date);if(!it)return;trashPush("weight",it);DB.weights=DB.weights.filter(x=>x.date!==date);save();renderWeight();renderToday();renderProgress();}
+function drawWeight(){
+  const cv=$("cw");const ws=DB.weights;if(!ws.length){ctxClear(cv,"暂无数据");return;}
+  const vals=ws.map(w=>w.weight);drawLine(cv,ws.map(w=>w.date),vals,"#3a7d6e","体重(kg)");
+}
+/* TDEE 提示条 */
+function recoTip(){
+  if(!DB.weights.length){$("w_tip").innerHTML="";return;}
+  const w=DB.weights[DB.weights.length-1].weight;
+  const bmr=calcBMR(w),tdee=calcTDEE(bmr),ri=recoIntake(tdee);
+  $("w_tip").innerHTML=`<div class="tip">当前 ${w}kg ｜ BMR≈<b>${bmr}</b> kcal ｜ TDEE(系数${DB.activity})≈<b>${tdee}</b> kcal<br>建议摄入 ≈ <b>${ri.cal} kcal</b> ｜ 蛋白 ≈ <b>${ri.pro} g</b>（缺口约450）。 <button class="act2" onclick="applyIntake(${ri.cal},${ri.pro})">应用到目标</button></div>`;
+}
+function applyIntake(cal,pro){DB.targets.calories=cal;DB.targets.protein=pro;save();renderToday();renderData();if($("w_tip"))$("w_tip").innerHTML+='<div class="muted" style="margin-top:6px">✓ 已更新今日目标</div>';}
+
+/* ---------- 照片 ---------- */
+function renderPhoto(){
+  const box=$("ph_list");
+  if(!DB.photos.length){box.innerHTML='<div class="empty" style="width:100%">还没有照片，点上方按钮上传</div>';return;}
+  box.innerHTML=DB.photos.slice().reverse().map((p,i)=>`<img src="${p.data}" alt="${p.date}" title="${p.date}" onclick="viewPhoto('${p.data}')">`).join("");
+}
+function addPhoto(inp){
+  const f=inp.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=e=>{const img=new Image();img.onload=()=>{
+    const maxW=640;let w=img.width,h=img.height;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    const c=document.createElement("canvas");c.width=w;c.height=h;const cx=c.getContext("2d");cx.drawImage(img,0,0,w,h);
+    let data;try{data=c.toDataURL("image/jpeg",0.55);}catch(err){alert("当前浏览器无法处理图片（可能禁用了存储/画布），请换 Chrome/Edge。");return;}
+    DB.photos.push({date:todayStr(),data,note:""});
+    if(DB.photos.length>48)DB.photos.shift();
+    save();renderPhoto();
+    if($("cmp_row"))renderProgress();
+  };img.src=e.target.result;};
+  rd.readAsDataURL(f);inp.value="";
+}
+let curPhotoData="";
+function viewPhoto(d){curPhotoData=d;$("ph_light_img").src=d;$("ph_light").style.display="flex";}
+function delPhoto(){if(!curPhotoData)return;if(!confirm("确定删除这张照片？可到「回收站」恢复"))return;const it=DB.photos.find(p=>p.data===curPhotoData);if(it)trashPush("photo",it);DB.photos=DB.photos.filter(p=>p.data!==curPhotoData);save();$("ph_light").style.display="none";renderPhoto();renderProgress();}
+
+/* ---------- 训练 ---------- */
+let editingIds=null;
+function renderTrain(){
+  const sel=$("tpl_sel");
+  const prev=sel.value;
+  const order=Object.keys(PLAN.templateGroups); // 大类顺序：居家训练→健身房→体能恢复
+  const known={};
+  let html="";
+  order.forEach(cat=>{
+    const names=Object.keys(PLAN.templateGroups[cat]).filter(n=>DB.templates[n]);
+    if(!names.length)return;
+    html+=`<optgroup label="${esc(cat)}">`+names.map(n=>{
+      const st=PLAN.templateGroups[cat][n].stage;
+      known[n]=1;
+      return `<option value="${esc(n)}">${esc(n)}（${st}）</option>`;}).join("")+`</optgroup>`;
+  });
+  // 自定义模板（用户编辑/新增、不在默认分组里的）
+  const custom=Object.keys(DB.templates).filter(n=>!known[n]);
+  if(custom.length)html+=`<optgroup label="自定义">`+custom.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`;
+  sel.innerHTML=html;
+  if(prev&&DB.templates[prev])sel.value=prev; // 保存/刷新后保持当前选择
+  loadTemplate();
+  let h=DB.trainings.map((x,idx)=>{const dn=x.items.filter(i=>i.done).length;return `<div class="hist"><span class="hbody"><b>${x.date}</b> ｜ ${esc(x.template||"训练")} ｜ 完成 ${dn}/${x.items.length}${x.rpe?" ｜ RPE "+x.rpe:""}${x.note?" ｜ "+esc(x.note):""}</span><button class="delete" onclick="delTrain(${idx})">删除</button> <button class="ghost" onclick="editTraining(${idx})" style="font-size:12px;padding:4px 10px">编辑</button></div>`;}).reverse().join("");
+  $("t_hist").innerHTML=h||'<div class="empty">还没有训练记录</div>';
+}
+function delTrain(idx){if(!confirm("删除这条训练记录？可到「回收站」恢复"))return;const it=DB.trainings[idx];if(!it)return;trashPush("train",it);DB.trainings.splice(idx,1);save();renderTrain();renderToday();renderProgress();}
+function editTraining(idx){const rec=DB.trainings[idx];if(!rec)return;$("he_idx").value=idx;$("he_title").textContent=rec.date+" · "+(rec.template||"训练");$("he_items").innerHTML=rec.items.map((it,i)=>`<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(it.name)}</span><label style="margin:0;display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" class="chk" data-k="done" ${it.done?"checked":""}>完成</label><button class="delete" onclick="delHistItem(${i})">移除</button></div><div class="row"><input class="mini" placeholder="组" data-k="sets" value="${esc(it.sets)}"><input class="mini" placeholder="次" data-k="reps" value="${esc(it.reps)}"><input class="mini" placeholder="kg" data-k="weight" value="${esc(it.weight)}"></div></div>`).join("");const acts=allActions();$("he_add").innerHTML='<option value="">+ 添加动作...</option>'+acts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");$("hist_edit").style.display="block";$("hist_edit").scrollIntoView({behavior:"smooth"});}
+function delHistItem(i){const idx=+$("he_idx").value;DB.trainings[idx].items.splice(i,1);editTraining(idx);}
+function addHistItem(){const id=$("he_add").value;if(!id)return;const a=getAct(id);if(!a)return;const idx=+$("he_idx").value;DB.trainings[idx].items.push({actionId:a.id,name:a.name,done:false,sets:"",reps:"",weight:""});$("he_add").value="";editTraining(idx);}
+function saveHistEdit(){const idx=+$("he_idx").value;const items=[...$("he_items").querySelectorAll(".item")].map(el=>{const i=+el.dataset.i;const it=DB.trainings[idx].items[i];return {actionId:it?it.actionId:"",name:it?it.name:el.querySelector('.nm').textContent,done:el.querySelector('[data-k=done]').checked,sets:el.querySelector('[data-k=sets]').value||"",reps:el.querySelector('[data-k=reps]').value||"",weight:el.querySelector('[data-k=weight]').value||""};});DB.trainings[idx].items=items;save();$("hist_edit").style.display="none";renderTrain();renderToday();}
+function stageClass(s){return s==='进阶'?'st-adv':s==='待解锁'?'st-lock':'st-base';}
+function lastLoadRec(id){
+  for(let k=DB.trainings.length-1;k>=0;k--){
+    const it=DB.trainings[k].items.find(x=>x.actionId===id && (x.sets||x.reps||x.weight));
+    if(it)return {date:DB.trainings[k].date, s:it.sets, r:it.reps, w:it.weight};
+  }
+  return null;
+}
+function loadHint(id){
+  const recs=[];
+  DB.trainings.forEach(t=>{const it=t.items.find(x=>x.actionId===id&&(x.sets||x.reps||x.weight));if(it)recs.push({s:+it.sets||0,r:+it.reps||0,w:+it.weight||0});});
+  if(recs.length<2)return '';
+  const a=recs[recs.length-2], b=recs[recs.length-1];
+  const va=a.s*a.r+a.w, vb=b.s*b.r+b.w;
+  if(vb>va)return ' <span class="up">进展 ✓</span>';
+  if(vb===va)return ' <span class="same">平台·可考虑加量 ▲</span>';
+  return ' <span class="down">负荷下降</span>';
+}
+function renderProgressCard(){
+  const name=$("tpl_sel").value; const ids=DB.templates[name]||[];
+  if(!ids.length){$("tpl_progress").innerHTML='<div class="muted">本模板暂无动作</div>';return;}
+  $("tpl_progress").innerHTML=ids.map(id=>{
+    const a=getAct(id); if(!a)return"";
+    const recs=[];
+    DB.trainings.forEach(t=>{const it=t.items.find(x=>x.actionId===id&&(x.sets||x.reps||x.weight));if(it)recs.push({date:t.date,s:it.sets,r:it.reps,w:it.weight});});
+    if(!recs.length)return `<div class="pr"><span class="nm">${esc(a.name)}</span><span class="muted">暂无记录</span></div>`;
+    const trend=recs.slice(-3).map(r=>`${r.date.slice(5)} ${r.s||'-'}×${r.r||'-'}${r.w?' @'+r.w+'kg':''}`).join(' → ');
+    return `<div class="pr"><span class="nm">${esc(a.name)}</span><span class="muted" style="font-size:11.5px">${esc(trend)}</span></div>`;
+  }).join("");
+}
+function loadTemplate(){
+  hideEdit();
+  const name=$("tpl_sel").value;const ids=DB.templates[name]||[];
+  const meta=(DB.templateMeta&&DB.templateMeta[name])||{stage:"基础"};
+  $("tpl_stage").innerHTML=`<span class="stage ${stageClass(meta.stage)}">${meta.stage}</span>`;
+  $("tpl_items").innerHTML=ids.map((id,i)=>{const a=getAct(id);if(!a)return"";
+    const last=lastLoadRec(id);
+    const lastHtml=last?`<div class="lastload">上次：${last.date.slice(5)} ${last.s||'-'}×${last.r||'-'}${last.w?' @'+last.w+'kg':''}${loadHint(id)}</div>`:'';
+    return `<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(a.name)}</span><label style="margin:0;display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12px">完成<input type="checkbox" class="chk" data-k="done"></label></div><div class="muted" style="font-size:11.5px;margin:3px 0">${esc(a.how)}</div>${lastHtml}<div class="row"><input class="mini" placeholder="组" data-k="sets"><input class="mini" placeholder="次" data-k="reps"><input class="mini" placeholder="kg" data-k="weight"></div></div>`;
+  }).join("");
+  renderProgressCard();
+}
+function saveTraining(){
+  const name=$("tpl_sel").value;const date=todayStr();
+  const items=[...$("tpl_items").querySelectorAll(".item")].map(el=>{const idx=+el.dataset.i;const a=getAct(DB.templates[name][idx]);if(!a)return null;
+    return {actionId:a.id,name:a.name,done:el.querySelector('[data-k=done]').checked,sets:el.querySelector('[data-k=sets]').value||"",reps:el.querySelector('[data-k=reps]').value||"",weight:el.querySelector('[data-k=weight]').value||""};}).filter(Boolean);
+  const rec={date,template:name,items,rpe:$("t_rpe").value||"",note:$("t_note").value.trim()};
+  const i=DB.trainings.findIndex(x=>x.date===date&&x.template===name);
+  if(i>=0)DB.trainings[i]=rec;else DB.trainings.push(rec);
+  DB.trainings.sort((a,b)=>a.date<b.date?-1:1);save();
+  $("t_rpe").value="";$("t_note").value="";renderTrain();renderToday();
+}
+/* 模板编辑 */
+function showEdit(){const name=$("tpl_sel").value;$("ed_name").textContent=name;editingIds=(DB.templates[name]||[]).slice();renderEditList();$("tpl_edit").style.display="block";$("tpl_edit").scrollIntoView({behavior:"smooth"});}
+function hideEdit(){$("tpl_edit").style.display="none";editingIds=null;}
+function renderEditList(){
+  const acts=allActions();
+  $("ed_list").innerHTML=acts.map(a=>{const on=editingIds.includes(a.id);return `<label class="editem"><input type="checkbox" ${on?"checked":""} onchange="toggleEdit('${a.id}',this.checked)"> <span><b>${esc(a.name)}</b><br><span class="muted" style="font-size:11.5px">${esc(a.how)}</span></span></label>`;}).join("");
+}
+function toggleEdit(id,on){if(on){if(!editingIds.includes(id))editingIds.push(id);}else{editingIds=editingIds.filter(x=>x!==id);}}
+function addCustomAction(){
+  const nm=$("ca_name").value.trim();const hw=$("ca_how").value.trim();
+  if(!nm){alert("请填动作名");return;}
+  const id="c"+Date.now();
+  DB.customActions.push({id,name:nm,how:hw,phase:"custom"});
+  editingIds.push(id);save();
+  $("ca_name").value="";$("ca_how").value="";
+  renderEditList();renderRef();
+}
+function saveTemplate(){
+  const name=$("tpl_sel").value;DB.templates[name]=editingIds.slice();save();hideEdit();loadTemplate();renderTrain();
+}
+
+/* ---------- 饮食 ---------- */
+const MEAL_CATS=[["B","早餐"],["L","午餐"],["D","晚餐"],["S","加餐"],["T","汤品"],["Q","快手"]];
+let curCat="B";
+function renderDiet(){
+  $("d_tabs").innerHTML=MEAL_CATS.map(([k,n])=>`<button class="${k===curCat?'on':''}" onclick="switchCat('${k}')">${n}</button>`).join("");
+  const list=RECIPES[curCat]||[];
+  $("d_list").innerHTML=list.map(r=>`<div class="item"><div class="top"><span class="nm">${esc(r.name)}</span><button class="act2" onclick="addMeal('${r.id}','${curCat}')">+ 加入</button></div><div class="muted" style="font-size:11.5px">${r.kcal}kcal ｜ 蛋白${r.p}g ｜ 脂肪${r.f}g ｜ 碳水${r.c}g${r.tag?'<span class="tag">'+esc(r.tag)+'</span>':''}</div></div>`).join("");
+  renderDietToday();renderAdded();
+}
+function switchCat(k){curCat=k;renderDiet();}
+function addMeal(id,cat){const r=(RECIPES[cat]||[]).find(x=>x.id===id);if(!r)return;const dt=todayStr();if(!DB.diets[dt])DB.diets[dt]={meals:[]};DB.diets[dt].meals.push({type:cat,name:r.name,kcal:r.kcal,p:r.p,f:r.f,c:r.c});save();renderAdded();renderDietToday();renderToday();}
+function renderDietToday(){
+  const d=DB.diets[todayStr()]||{meals:[]};let k=0,p=0,f=0,c=0;d.meals.forEach(m=>{k+=m.kcal||0;p+=m.p||0;f+=m.f||0;c+=m.c||0;});const t=DB.targets;
+  const bar=(val,tg,cls,u)=>{const pct=Math.min(100,val/tg*100);return `<div class="bar ${cls}"><i style="width:${pct}%"></i></div><div class="metric"><span>${val.toFixed(0)} ${u}</span><span>目标 ${tg}${u} · ${pct.toFixed(0)}%</span></div>`;};
+  $("d_today").innerHTML=`<div class="muted">热量</div>${bar(k,t.calories,"","kcal")}<div class="muted" style="margin-top:6px">蛋白质</div>${bar(p,t.protein,"p","g")}<div class="muted" style="margin-top:6px">脂肪</div>${bar(f,t.fat,"f","g")}<div class="muted" style="margin-top:6px">碳水</div>${bar(c,t.carbs,"c","g")}`;
+}
+function renderAdded(){
+  const d=DB.diets[todayStr()]||{meals:[]};
+  if(!d.meals.length){$("d_added").innerHTML='<div class="empty">今天还没添加饮食</div>';return;}
+  $("d_added").innerHTML=d.meals.map((m,i)=>`<div class="hist"><span class="hbody"><b>${esc(m.name)}</b> ｜ ${m.kcal}kcal P${m.p} F${m.f} C${m.c}</span><button class="delete" onclick="delMeal(${i})">删除</button></div>`).join("");
+}
+function delMeal(i){const dt=todayStr();const m=DB.diets[dt].meals[i];if(!confirm("删除这餐？可到「回收站」恢复"))return;trashPush("meal",{date:dt,meal:m});DB.diets[dt].meals.splice(i,1);if(!DB.diets[dt].meals.length)delete DB.diets[dt];save();renderAdded();renderDietToday();renderToday();renderTrash();}
+function toggleManual(){const f=$("manual_form");f.style.display=f.style.display==="none"?"block":"none";}
+function manualMeal(){
+  const name=$("m_name").value.trim();if(!name){alert("请填食物/餐名称");return;}
+  const kcal=parseFloat($("m_kcal").value)||0;
+  const p=parseFloat($("m_p").value)||0;
+  const f=parseFloat($("m_f").value)||0;
+  const c=parseFloat($("m_c").value)||0;
+  const dt=todayStr();if(!DB.diets[dt])DB.diets[dt]={meals:[]};DB.diets[dt].meals.push({type:"M",name,kcal,p,f,c});save();renderAdded();renderDietToday();renderToday();
+  $("m_name").value="";$("m_kcal").value="";$("m_p").value="";$("m_f").value="";$("m_c").value="";
+  $("manual_form").style.display="none";
+}
+
+/* ---------- 进度 ---------- */
+function renderProgress(){
+  const ws=DB.weights;
+  if(ws.length){drawLine($("cp_w"),ws.map(w=>w.date),ws.map(w=>w.weight),"#3a7d6e","体重(kg)");
+    const wa=ws.filter(w=>w.waist);if(wa.length)drawLine($("cp_wa"),wa.map(w=>w.date),wa.map(w=>w.waist),"#e08a5b","腰围(cm)");else ctxClear($("cp_wa"),"暂无腰围数据");}
+  else {ctxClear($("cp_w"),"暂无数据");ctxClear($("cp_wa"),"暂无数据");}
+  if(DB.photos.length>=2){
+    const first=DB.photos[0],last=DB.photos[DB.photos.length-1];
+    $("cmp_row").innerHTML=`<div style="flex:1"><div class="muted center">${first.date}</div><img src="${first.data}" style="width:100%;border-radius:8px;border:1px solid var(--line)"></div><div style="flex:1"><div class="muted center">${last.date}</div><img src="${last.data}" style="width:100%;border-radius:8px;border:1px solid var(--line)"></div>`;
+    $("ph_thumbs").innerHTML=DB.photos.map(p=>`<img src="${p.data}" onclick="viewPhoto('${p.data}')">`).join("");
+    $("cmp_empty").style.display="none";$("cmp_row").style.display="flex";$("ph_thumbs").style.display="flex";
+  } else {$("cmp_row").style.display="none";$("ph_thumbs").style.display="none";$("cmp_empty").style.display="block";}
+  const days=[];for(let i=0;i<28;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(todayStr(d));}
+  const trdays=new Set(DB.trainings.map(x=>x.date));
+  const done=days.filter(d=>trdays.has(d)).length;
+  $("p_rate").innerHTML=`近 28 天训练打卡 <b style="color:var(--brand)">${done}</b> / 28 天（${(done/28*100).toFixed(0)}%）<br><span class="muted">建议每周训练 3-4 天，达标率约 50%+</span>`;
+}
+
+/* ---------- 图表 ---------- */
+function ctxClear(cv,msg){const x=cv.getContext("2d");if(!x)return;x.clearRect(0,0,cv.width,cv.height);x.fillStyle="#6b6b6b";x.font="13px sans-serif";x.fillText(msg,20,40);}
+function drawLine(cv,labels,vals,color,unit){
+  const x=cv.getContext("2d");if(!x)return;x.clearRect(0,0,cv.width,cv.height);
+  if(!vals.length){ctxClear(cv,"暂无数据");return;}
+  const W=cv.width,H=cv.height,pl=44,pr=12,pt=14,pb=28;
+  const min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
+  const lo=min-span*0.15,hi=max+span*0.15;
+  const X=i=>pl+(W-pl-pr)*(vals.length===1?0.5:i/(vals.length-1));
+  const Y=v=>pt+(H-pt-pb)*(1-(v-lo)/(hi-lo));
+  x.strokeStyle="#e4e0d8";x.lineWidth=1;
+  for(let g=0;g<=4;g++){const yy=pt+(H-pt-pb)*g/4;x.beginPath();x.moveTo(pl,yy);x.lineTo(W-pr,yy);x.stroke();
+    x.fillStyle="#9a9a9a";x.font="10px sans-serif";x.fillText((hi-(hi-lo)*g/4).toFixed(1),4,yy+3);}
+  x.strokeStyle=color;x.lineWidth=2;x.beginPath();vals.forEach((v,i)=>{const px=X(i),py=Y(v);i?x.lineTo(px,py):x.moveTo(px,py);});x.stroke();
+  x.fillStyle=color;vals.forEach((v,i)=>{x.beginPath();x.arc(X(i),Y(v),3,0,7);x.fill();});
+  x.fillStyle="#9a9a9a";x.font="10px sans-serif";
+  const step=Math.ceil(vals.length/6);
+  labels.forEach((l,i)=>{if(i%step===0||i===labels.length-1)x.fillText(l.slice(5),X(i)-12,H-10);});
+}
+
+/* ---------- 参考 ---------- */
+function renderRef(){
+  $("r_phases").innerHTML=PLAN.phases.map(p=>`<div class="item"><div class="top"><span class="nm">${esc(p.n)}</span><span class="bd">${esc(p.w)}</span></div><div class="muted" style="font-size:12.5px;margin-top:3px">${esc(p.d)}</div></div>`).join("");
+  const acts=allActions();
+  $("r_actions").innerHTML=acts.map(a=>`<div class="item"><div class="top"><span class="nm">${esc(a.name)}</span></div><div class="muted" style="font-size:12px">${esc(a.how)}</div></div>`).join("");
+}
+
+/* ---------- 数据 ---------- */
+function renderData(){
+  const p=DB.profile;
+  $("d_profile").innerHTML=`档案：<b>${esc(ROOT.profiles[ROOT.active].name)}</b><br>性别 ${p.gender} ｜ 年龄 ${p.age} ｜ 身高 ${p.height}cm ｜ 起始 ${p.weightStart}kg ｜ 目标 ${p.weightGoal}kg<br>记录：体重 ${DB.weights.length} 条 ｜ 训练 ${DB.trainings.length} 次 ｜ 饮食日志 ${Object.keys(DB.diets).length} 天 ｜ 照片 ${DB.photos.length} 张 ｜ 自定义动作 ${DB.customActions.length} 个`;
+  $("act_sel").value=String(DB.activity);
+  renderTDEE();
+}
+function setActivity(){DB.activity=parseFloat($("act_sel").value);save();renderTDEE();}
+function renderTDEE(){
+  const w=DB.weights.length?DB.weights[DB.weights.length-1].weight:DB.profile.weightStart;
+  const bmr=calcBMR(w),tdee=calcTDEE(bmr),ri=recoIntake(tdee);
+  $("tdee_box").innerHTML=`<div class="muted">按最新体重 ${w}kg 计算：</div>
+    <div class="metric"><span>BMR（基础代谢）</span><b>${bmr} kcal</b></div>
+    <div class="metric"><span>TDEE（活动系数 ${DB.activity}）</span><b>${tdee} kcal</b></div>
+    <div class="metric"><span>建议摄入（缺口≈450）</span><b style="color:var(--brand2)">${ri.cal} kcal</b></div>
+    <div class="metric"><span>建议蛋白（≈2.0g/kg）</span><b>${ri.pro} g</b></div>
+    <div style="margin-top:8px"><button class="act2" onclick="applyIntake(${ri.cal},${ri.pro})">应用为今日目标</button>
+    <span class="muted">（当前目标 ${DB.targets.calories}kcal / 蛋白 ${DB.targets.protein}g）</span></div>`;
+}
+function exportData(){const blob=new Blob([JSON.stringify(ROOT,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="fitlog_data_"+todayStr()+".json";a.click();$("d_msg").textContent="已导出全部档案，把文件存到云盘/微信即可在别处导入。";}
+function importData(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!d.profiles){alert("文件格式错误（需包含 profiles）");return;}if(!confirm("导入将覆盖本机现有数据（全部档案），确定继续？"))return;Object.values(d.profiles).forEach(p=>{p.data=mergeData(p.data);});if(!d.profiles[d.active])d.active=Object.keys(d.profiles)[0];ROOT=d;DB=ROOT.profiles[ROOT.active].data;save();$("d_msg").textContent="导入成功！";renderAll();}catch(e){alert("文件格式错误");}};rd.readAsText(f);inp.value="";}
+function clearData(){if(confirm("确定清空当前档案「"+ROOT.profiles[ROOT.active].name+"」的全部数据？此操作不可恢复（请先导出备份）。")){ROOT.profiles[ROOT.active].data=freshData();DB=ROOT.profiles[ROOT.active].data;save();renderAll();$("d_msg").textContent="已清空当前档案数据。";}}
+
+/* 初始化 */
+updateHeader();
+if(!storageOK){const w=document.createElement("div");w.className="warn";w.style.margin="10px 14px";w.textContent="⚠ 当前浏览器禁用了本地存储（常见于 Safari 打开本地文件或隐私/无痕模式），数据将无法保存。建议用 Chrome / Edge 打开本文件，并关闭无痕模式。";document.querySelector("header").after(w);}
+save();
+renderAll();
+</script>
+</body></html>

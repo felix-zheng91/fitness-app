@@ -1,0 +1,18 @@
+{
+  "name": "FitLog · 健身打卡本",
+  "short_name": "FitLog",
+  "description": "训练+饮食+体型记录打卡，支持多人档案",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f4ef",
+  "theme_color": "#3a7d6e",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
