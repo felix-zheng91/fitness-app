@@ -5,7 +5,7 @@
 <style>
 :root{--bg:#f6f4ef;--card:#fff;--brand:#3a7d6e;--brand2:#e08a5b;--soft:#eef4f1;--line:#e4e0d8;--ink:#2b2b2b;--muted:#6b6b6b;--ok:#2f7a4a;--warn:#c0392b;}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;padding-bottom:64px;}
+body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;padding-bottom:64px;overflow-x:clip;}
 header{background:linear-gradient(135deg,var(--brand),#2f6358);color:#fff;padding:16px 16px 14px;}
 header h1{margin:0;font-size:18px;}
 header p{margin:3px 0 0;font-size:12.5px;opacity:.9;}
@@ -33,7 +33,8 @@ nav::-webkit-scrollbar{display:none;height:0;}
 nav button{flex:0 0 auto;border:none;background:none;padding:9px 6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;text-align:center;border-bottom:2px solid transparent;}
 nav button.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:700;}
 .page{display:none;padding:14px;max-width:760px;margin:0 auto;}
-.page.active{display:block;}
+.page.active{display:block;animation:pageIn .22s ease both;}
+@keyframes pageIn{from{opacity:.35;transform:translateX(var(--px,14px));}to{opacity:1;transform:none;}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:14px;}
 h2{font-size:17px;margin:0 0 10px;color:var(--brand);}
 h3{font-size:14.5px;margin:14px 0 7px;color:var(--ink);}
@@ -589,7 +590,9 @@ function calcBMR(w){const p=DB.profile;return Math.round(10*w+6.25*p.height-5*p.
 function calcTDEE(bmr){return Math.round(bmr*DB.activity);}
 function recoIntake(tdee){const deficit=450;return {cal:Math.round(tdee-deficit),pro:Math.round(2.0*(DB.weights.length?DB.weights[DB.weights.length-1].weight:DB.profile.weightStart))};}
 
-function showPage(p){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("nav").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.p===p));$(p).classList.add("active");
+function showPage(p,dir){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("nav").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.p===p));const pg=$(p);pg.classList.add("active");
+  pg.style.setProperty('--px',(dir>=0?14:-14)+'px');
+  const ab=$("nav").querySelector('button.active');if(ab)ab.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
   if(p==="today")renderToday();if(p==="weight")renderWeight();if(p==="train")renderTrain();if(p==="diet")renderDiet();if(p==="progress")renderProgress();if(p==="ref")renderRef();if(p==="data")renderData();if(p==="profiles")renderProfiles();if(p==="trash")renderTrash();}
 
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.p));
@@ -884,6 +887,16 @@ function renderTDEE(){
 function exportData(){const blob=new Blob([JSON.stringify(ROOT,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="fitlog_data_"+todayStr()+".json";a.click();$("d_msg").textContent="已导出全部档案，把文件存到云盘/微信即可在别处导入。";}
 function importData(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!d.profiles){alert("文件格式错误（需包含 profiles）");return;}if(!confirm("导入将覆盖本机现有数据（全部档案），确定继续？"))return;Object.values(d.profiles).forEach(p=>{p.data=mergeData(p.data);});if(!d.profiles[d.active])d.active=Object.keys(d.profiles)[0];ROOT=d;DB=ROOT.profiles[ROOT.active].data;save();$("d_msg").textContent="导入成功！";renderAll();}catch(e){alert("文件格式错误");}};rd.readAsText(f);inp.value="";}
 function clearData(){if(confirm("确定清空当前档案「"+ROOT.profiles[ROOT.active].name+"」的全部数据？此操作不可恢复（请先导出备份）。")){ROOT.profiles[ROOT.active].data=freshData();DB=ROOT.profiles[ROOT.active].data;save();renderAll();$("d_msg").textContent="已清空当前档案数据。";}}
+
+/* ---------- 左右滑动切换页面 ---------- */
+const PAGE_ORDER=['today','weight','train','diet','progress','ref','data','profiles','trash'];
+function curPage(){const a=document.querySelector('.page.active');return a?a.id:'today';}
+function goSwipe(d){const i=PAGE_ORDER.indexOf(curPage());if(d>0&&i<PAGE_ORDER.length-1)showPage(PAGE_ORDER[i+1],1);else if(d<0&&i>0)showPage(PAGE_ORDER[i-1],-1);}
+let _sx=0,_sy=0,_st=0,_ok=true;
+const NO_SWIPE='nav,.chartbox,.tabs,input,select,textarea,button,a';
+document.addEventListener('touchstart',e=>{const t=e.touches[0];_sx=t.clientX;_sy=t.clientY;_st=Date.now();_ok=!e.target.closest(NO_SWIPE);},{passive:true});
+document.addEventListener('touchend',e=>{if(!_ok)return;const t=e.changedTouches[0];const dx=t.clientX-_sx,dy=t.clientY-_sy;if(Date.now()-_st>900)return;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.6)goSwipe(dx<0?1:-1);},{passive:true});
+document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='ArrowRight')goSwipe(1);else if(e.key==='ArrowLeft')goSwipe(-1);});
 
 /* 初始化 */
 updateHeader();
