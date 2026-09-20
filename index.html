@@ -243,16 +243,6 @@ nav.tabbar button:focus-visible{outline:2px solid var(--brand-l);outline-offset:
 .lastload .same{color:var(--amber);font-weight:700;}
 .lastload .down{color:var(--warn);font-weight:700;}
 
-/* 阶段图标 chip：挂在「编辑此模板」按钮尾部，按钮本来就有 44px 触控高度，
-   所以 chip 不额外增加行高，也不产生第三行布局 */
-.chip{margin-left:6px;font-size:var(--f-sm);line-height:1;opacity:.9;}
-
-/* 图例：文字标签已换成图标，这里说明图标含义。
-   <i> 用等宽字体 + 固定宽度，让三个图标竖直对齐，不会因字形宽度差而错位。 */
-.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:7px;font-size:var(--f-xs);color:var(--faint);}
-.legend .lg{display:inline-flex;align-items:center;gap:4px;}
-.legend .lg i{font-style:normal;font-family:var(--mono);font-size:var(--f-sm);color:var(--muted);width:1em;text-align:center;}
-
 /* 阶段分段选择器：与应用导航同一套语言（无边框、透明底、下划线选中） */
 .seg{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:4px;}
 .seg button{
@@ -566,11 +556,9 @@ canvas{max-width:100%;}
     <h2>训练打卡</h2>
     <label>选择今日模板（按大类区分）</label>
     <select id="tpl_sel" onchange="loadTemplate()"></select>
-    <!-- 文字标签已全部换成图标，这里给一行图例；否则用户不知道 ○◐● 各代表什么 -->
-    <div class="legend" id="stage_legend"></div>
-    <!-- 阶段不再单独占一行：并入「编辑此模板」按钮组，点按钮即展开修改 -->
+    <!-- 阶段不再在这张卡片上展示：展开「编辑此模板」后由分段控件查看与修改 -->
     <div class="row mt-8">
-      <button class="ghost" onclick="showEdit()">✎ 编辑此模板 / 加自定义动作<span class="chip" id="tpl_stage_chip"></span></button>
+      <button class="ghost" onclick="showEdit()">✎ 编辑此模板 / 加自定义动作</button>
     </div>
     <div id="tpl_items"></div>
     <div class="sec">
@@ -1367,19 +1355,13 @@ function renderTrain(){
     if(!names.length)return;
     html+=`<optgroup label="${esc(cat)}">`+names.map(n=>{
       known[n]=1;
-      return `<option value="${esc(n)}">${esc(optionLabel(n))}</option>`;}).join("")+`</optgroup>`;
+      return `<option value="${esc(n)}">${esc(n)}</option>`;}).join("")+`</optgroup>`;
   });
   // 自定义模板（用户编辑/新增、不在默认分组里的）
   const custom=Object.keys(DB.templates).filter(n=>!known[n]);
-  if(custom.length)html+=`<optgroup label="自定义">`+custom.map(n=>`<option value="${esc(n)}">${esc(optionLabel(n))}</option>`).join("")+`</optgroup>`;
+  if(custom.length)html+=`<optgroup label="自定义">`+custom.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`;
   sel.innerHTML=html;
   if(prev&&DB.templates[prev])sel.value=prev; // 保存/刷新后保持当前选择
-  /* 选项的显示文本与 value 不同（多了图标与阶段），设置 value 后不能靠 DOM 推断。
-     必须把当前模板的阶段图标同步到「编辑此模板」按钮上的 chip，否则用户在
-     展开编辑面板前看不出当前模板属于哪个阶段。 */
-  const chip=$("tpl_stage_chip");
-  if(chip)chip.textContent=sel.value?stageIcon(sel.value):"";
-  renderStageLegend();
   loadTemplate();
   let h=DB.trainings.map((x,idx)=>{const dn=x.items.filter(i=>i.done).length;return `<div class="hist"><span class="hbody"><b>${x.date}</b> ｜ ${esc(x.template||"训练")} ｜ 完成 ${dn}/${x.items.length}${x.rpe?" ｜ RPE "+x.rpe:""}${x.note?" ｜ "+esc(x.note):""}</span><button class="delete" onclick="delTrain(${idx})">删除</button> <button class="ghost btn-sm" onclick="editTraining(${idx})">编辑</button></div>`;}).reverse().join("");
   $("t_hist").innerHTML=h||'<div class="empty">还没有训练记录</div>';
@@ -1392,30 +1374,16 @@ function saveHistEdit(){const idx=+$("he_idx").value;const items=[...$("he_items
 /* ---------- 阶段标识 ----------
    历史沿革：最初是 <select> 旁边一个独立 <span> 徽章（与下拉框不同行）；
    接着拼进选项文本「模板名［阶段］」；再改成「图标 + ASCII 标签」；
-   现在是**纯图标、不带任何文字**，如「○ 基础激活日」「● 上肢拉力（进阶）」。
-   图标直接表态、不附文字，所以每个图标必须是白名单里的单字符。 */
+   然后试过**纯图标**（「○ 基础激活日」「● 上肢拉力（进阶）」）；
+   最后按用户要求**把圆圈全部去掉**——下拉框只显示干净的模板名。
+   于是 STAGE_ICON / stageIcon / optionLabel / renderStageLegend 与那行图例
+   一并删除。阶段不再在下拉框旁呈现，查看与修改统一走「编辑此模板」展开后的
+   分段控件（那里本来就是可点选的文字）。 */
 const STAGES=["基础","进阶","待解锁"];
-/* 三个都是 Basic Multilingual Plane 内的单字符：
-   ○ 基础（空心圆＝起点） / ◐ 进阶（半实心＝进行中） / ● 待解锁（实心＝锁定）
-   不用 emoji（🔒 等）是因为它们会走彩色 emoji 字体，与另外两个黑白几何符号
-   字重、基线、宽度都不一致，在同一列里会明显跳。 */
-const STAGE_ICON={"基础":"○","进阶":"◐","待解锁":"●"};
 function stageOf(name){
   const m=DB.templateMeta&&DB.templateMeta[name];
   const s=(m&&m.stage)||"基础";
   return STAGES.indexOf(s)>=0?s:"基础";   // 容错：脏数据一律回落到「基础」
-}
-function stageIcon(name){return STAGE_ICON[stageOf(name)]||"○";}
-/* 下拉框选项文案：纯图标 + 名称，不再带阶段文字 */
-function optionLabel(name){return stageIcon(name)+" "+name;}
-/* 图例：图标替代了文字，必须有一处能查到含义。由 STAGES/STAGE_ICON 自动生成，
-   加阶段时不会忘记同步；只列出当前确实存在的阶段，避免出现用不上的图例。 */
-function renderStageLegend(){
-  const box=$("stage_legend");if(!box)return;
-  const used={};
-  Object.keys(DB.templates||{}).forEach(n=>{used[stageOf(n)]=1;});
-  box.innerHTML=STAGES.filter(s=>used[s]).map(s=>
-    `<span class="lg"><i>${STAGE_ICON[s]}</i>${esc(s)}</span>`).join("");
 }
 /* 编辑面板里的分段选择器：把当前阶段点亮 */
 function renderStageSeg(){
@@ -1465,7 +1433,7 @@ function renderProgressCard(){
 function loadTemplate(){
   hideEdit();
   const name=$("tpl_sel").value;const ids=DB.templates[name]||[];
-  /* 阶段徽章已并入下拉框选项文本，此处不再单独渲染 */
+  /* 阶段不再在此屏展示（下拉框选项与图例都已去掉圆圈），查看/修改走「编辑此模板」 */
   $("tpl_items").innerHTML=ids.map((id,i)=>{const a=getAct(id);if(!a)return"";
     const last=lastLoadRec(id);
     const lastHtml=last?`<div class="lastload">上次：${last.date.slice(5)} ${last.s||'-'}×${last.r||'-'}${last.w?' @'+last.w+'kg':''}${loadHint(id)}</div>`:'';
