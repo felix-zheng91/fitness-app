@@ -674,7 +674,7 @@ canvas{max-width:100%;}
     <h2>更多功能</h2>
     <div class="navlist">
       <button onclick="showPage('ref')">参考手册<em>路线图 · 动作要领</em><span class="car">›</span></button>
-      <button onclick="showPage('data')">数据同步<em>导出 / 导入 JSON</em><span class="car">›</span></button>
+      <button onclick="showPage('data')">数据备份<em>导出 / 恢复 JSON</em><span class="car">›</span></button>
       <button onclick="showPage('profiles')">档案管理<em>多人档案 · 目标设定</em><span class="car">›</span></button>
       <button onclick="showPage('trash')">回收站<em>已删除记录，可恢复</em><span class="car">›</span></button>
     </div>
@@ -682,7 +682,7 @@ canvas{max-width:100%;}
   <div class="card">
     <h2>本机数据</h2>
     <div class="ovw" id="more_stats"></div>
-    <div class="hint-t">数据全部存在本机浏览器。换设备请用「数据同步」导出后导入。</div>
+    <div class="hint-t">数据全部存在本机浏览器。建议定期到「数据备份」导出备份，换设备时可从备份恢复。</div>
   </div>
 </div>
 
@@ -750,14 +750,17 @@ canvas{max-width:100%;}
     <div id="tdee_box" class="mt-8"></div>
   </div>
   <div class="card">
-    <h2>数据同步（导出 / 导入）</h2>
-    <p class="muted">数据保存在本机浏览器（localStorage），不会上传。换手机/电脑时：<b>导出</b> JSON（含全部档案）→ 传到新设备 → <b>导入</b> 即可恢复，这就是你的同步方式。</p>
+    <h2>数据备份与恢复</h2>
+    <p class="muted">数据仍只保存在本机浏览器，不会自动上传。导出的 JSON 备份包含全部档案和照片；恢复前会校验文件并展示记录摘要，确认后才覆盖本机数据。</p>
     <div class="row">
-      <button class="act" onclick="exportData()">导出数据(JSON)</button>
-      <button class="act2" onclick="document.getElementById('imp').click()">导入数据</button>
+      <button class="act" onclick="exportData()">导出备份</button>
+      <button class="act2" onclick="document.getElementById('imp').click()">从备份恢复</button>
     </div>
-    <input type="file" id="imp" accept="application/json" style="display:none" onchange="importData(this)">
-    <div class="mt-10"><button class="ghost" onclick="clearData()">清空当前档案数据</button></div>
+    <input type="file" id="imp" accept=".json,application/json" style="display:none" onchange="importData(this)">
+    <div class="row mt-10">
+      <button class="act2" id="undo_import" style="display:none" onclick="undoImport()">撤销本次导入</button>
+      <button class="ghost" onclick="clearData()">清空当前档案数据</button>
+    </div>
     <p class="muted mt-10" id="d_msg"></p>
   </div>
   <div class="card">
@@ -867,6 +870,18 @@ canvas{max-width:100%;}
 
 <script>
 const DB_KEY="fitlog_v1";
+const BACKUP_FORMAT="fitlog-backup";
+const BACKUP_FORMAT_VERSION=1;
+const MAX_BACKUP_BYTES=20*1024*1024;
+const MAX_BACKUP_PROFILES=50;
+const MAX_BACKUP_RECORDS=10000;
+const MAX_BACKUP_PHOTOS=500;
+const MAX_BACKUP_CUSTOM_ACTIONS=1000;
+const MAX_BACKUP_TRASH=1000;
+const MAX_BACKUP_MEALS_PER_DAY=500;
+const MAX_BACKUP_TEMPLATES=200;
+const MAX_BACKUP_ACTIONS_PER_TEMPLATE=200;
+const MAX_BACKUP_ITEMS_PER_TRAINING=200;
 /* ---------- 薄肌教程（BV1rheP6TECb）提炼的参考数据 ---------- */
 const THIN_WEEKS=[
  {n:"一周两练",s:"只练 A、B",d:"A → B → 休息，循环。适合刚开始、时间少。",p:["A","B"]},
@@ -999,7 +1014,9 @@ function load(){
     const parsed=JSON.parse(raw);
     if(!parsed||!parsed.profiles){const id="p1";return ensureAvatarsOn({active:id,profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:mergeData(parsed)}}});}
     Object.values(parsed.profiles).forEach(p=>{p.data=mergeData(p.data);});
-    if(!parsed.profiles[parsed.active])parsed.active=Object.keys(parsed.profiles)[0];
+    const ids=Object.keys(parsed.profiles);
+    if(!ids.length)return ensureAvatarsOn(freshRoot());
+    if(!Object.prototype.hasOwnProperty.call(parsed.profiles,parsed.active))parsed.active=ids[0];
     return ensureAvatarsOn(parsed);
   }catch(e){storageOK=false;return ensureAvatarsOn(freshRoot());}
 }
@@ -1008,10 +1025,11 @@ function save(){try{localStorage.setItem(DB_KEY,JSON.stringify(ROOT));storageOK=
 let storageOK=true;
 let ROOT=load();
 let DB=ROOT.profiles[ROOT.active].data;
+let LAST_IMPORT_SNAPSHOT=null;
 
 function todayStr(d){d=d||new Date();const p=n=>(""+n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate());}
 function $(id){return document.getElementById(id);}
-function esc(s){return (s==null?"":""+s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function esc(s){return (s==null?"":""+s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function getAct(id){return PLAN.actions.find(a=>a.id===id)||(DB.customActions||[]).find(a=>a.id===id)||null;}
 function allActions(){return PLAN.actions.concat(DB.customActions||[]);}
 
@@ -1061,7 +1079,7 @@ function renderPfList(){
     const tag=`${pr.gender||'?'} ${pr.age||'—'}岁${pr.height?' · '+pr.height+'cm':''} → ${pr.weightGoal||'?'}kg`;
     return `<div class="pf-row${act?' active':''}">
       ${avatarHTML(p,{})}
-      <div class="pf-meta"><div class="pf-name">${esc(p.name)}${act?' <span class="cur-tag">当前</span>':''}</div><div class="pf-sub">${tag}</div></div>
+      <div class="pf-meta"><div class="pf-name">${esc(p.name)}${act?' <span class="cur-tag">当前</span>':''}</div><div class="pf-sub">${esc(tag)}</div></div>
       <div class="pf-ops">${act?'':`<button class="mini-btn" onclick="switchProfile('${p.id}')">切换</button>`}<button class="mini-btn" onclick="editProfileName('${p.id}')">改名</button>${ids.length>1?`<button class="mini-btn del" onclick="delProfileById('${p.id}')">删除</button>`:''}</div>
     </div>`;
   }).join("");
@@ -1115,10 +1133,11 @@ function renderProfiles(){
   $("pf_fat").value=p.data.targets.fat;
   $("pf_carb").value=p.data.targets.carbs;
 }
-function switchProfile(id){if(!id||!ROOT.profiles[id])return;ROOT.active=id;DB=ROOT.profiles[id].data;save();renderAll();}
+function switchProfile(id){if(!id||!Object.prototype.hasOwnProperty.call(ROOT.profiles,id))return;ROOT.active=id;DB=ROOT.profiles[id].data;save();renderAll();}
 function newProfile(){
   const nm=($("np_name").value||"").trim();
   if(!nm){alert("请填写档案名");return;}
+  if(Object.keys(ROOT.profiles).length>=MAX_BACKUP_PROFILES){alert("档案数量已达 "+MAX_BACKUP_PROFILES+" 个上限");return;}
   const id=uid();
   ROOT.profiles[id]={id:id,name:nm,avatar:AV_KEYS[Math.floor(Math.random()*AV_KEYS.length)],createdAt:todayStr(),data:freshData()};
   ROOT.active=id;DB=ROOT.profiles[id].data;save();
@@ -1293,13 +1312,29 @@ function saveWeight(){
   const w=parseFloat($("w_w").value);if(!w){alert("请填写体重");return;}
   const obj={date,weight:w,waist:parseFloat($("w_waist").value)||null,hip:parseFloat($("w_hip").value)||null,note:$("w_note").value.trim()};
   const i=DB.weights.findIndex(x=>x.date===date);
+  if(i<0&&DB.weights.length>=MAX_BACKUP_RECORDS){alert("体重记录已达 "+MAX_BACKUP_RECORDS+" 条上限");return;}
   if(i>=0)DB.weights[i]=obj;else DB.weights.push(obj);
   DB.weights.sort((a,b)=>a.date<b.date?-1:1);save();
   $("w_w").value="";$("w_waist").value="";$("w_hip").value="";$("w_note").value="";
   renderWeight();renderToday();
 }
 function trashPush(type,data){DB.trash.push({uid:Date.now()+"_"+Math.random().toString(36).slice(2,8),type,data,deletedAt:todayStr()});if(DB.trash.length>200)DB.trash.shift();}
-function restoreTrash(uid){const i=DB.trash.findIndex(t=>t.uid===uid);if(i<0)return;const t=DB.trash[i];if(t.type==="weight"){DB.weights.push(t.data);DB.weights.sort((a,b)=>a.date<b.date?-1:1);}else if(t.type==="train"){DB.trainings.push(t.data);DB.trainings.sort((a,b)=>a.date<b.date?-1:1);}else if(t.type==="photo"){DB.photos.push(t.data);}else if(t.type==="meal"){const dt=t.data.date;if(!DB.diets[dt])DB.diets[dt]={meals:[]};DB.diets[dt].meals.push(t.data.meal);}DB.trash.splice(i,1);save();renderTrash();renderWeight();renderTrain();renderDiet();renderPhoto();renderProgress();renderToday();}
+function restoreTrash(uid){
+  const i=DB.trash.findIndex(t=>t.uid===uid);if(i<0)return;const t=DB.trash[i];
+  if(t.type==="weight"){
+    if(DB.weights.length>=MAX_BACKUP_RECORDS){alert("体重记录已达 "+MAX_BACKUP_RECORDS+" 条上限");return;}
+    DB.weights.push(t.data);DB.weights.sort((a,b)=>a.date<b.date?-1:1);
+  }else if(t.type==="train"){
+    if(DB.trainings.length>=MAX_BACKUP_RECORDS){alert("训练记录已达 "+MAX_BACKUP_RECORDS+" 条上限");return;}
+    DB.trainings.push(t.data);DB.trainings.sort((a,b)=>a.date<b.date?-1:1);
+  }else if(t.type==="photo"){
+    if(DB.photos.length>=MAX_BACKUP_PHOTOS){alert("照片已达 "+MAX_BACKUP_PHOTOS+" 张上限");return;}
+    DB.photos.push(t.data);
+  }else if(t.type==="meal"){
+    const dt=t.data.date;if(!ensureMealCapacity(dt))return;DB.diets[dt].meals.push(t.data.meal);
+  }
+  DB.trash.splice(i,1);save();renderTrash();renderWeight();renderTrain();renderDiet();renderPhoto();renderProgress();renderToday();
+}
 function purgeTrashItem(uid){if(!confirm("彻底删除？此操作不可恢复"))return;DB.trash=DB.trash.filter(t=>t.uid!==uid);save();renderTrash();}
 function emptyTrash(){if(!confirm("清空回收站？所有记录将永久删除"))return;DB.trash=[];save();renderTrash();}
 function batchDelete(){const type=$("bd_type").value;const cut=$("bd_date").value;if(!cut){alert("请选择截止日期");return;}let moved=0;if(type==="weight"){DB.weights=DB.weights.filter(w=>{if(w.date<=cut){trashPush("weight",w);moved++;return false;}return true;});}else if(type==="train"){DB.trainings=DB.trainings.filter(x=>{if(x.date<=cut){trashPush("train",x);moved++;return false;}return true;});}else if(type==="photo"){DB.photos=DB.photos.filter(p=>{if(p.date<=cut){trashPush("photo",p);moved++;return false;}return true;});}else if(type==="meal"){Object.keys(DB.diets).forEach(dt=>{if(dt<=cut){DB.diets[dt].meals.forEach(m=>trashPush("meal",{date:dt,meal:m}));moved+=DB.diets[dt].meals.length;delete DB.diets[dt];}});}save();renderTrash();renderWeight();renderTrain();renderDiet();renderPhoto();renderProgress();renderToday();if(moved)alert("已删除 "+moved+" 条，可在回收站还原");else alert("没有符合条件的记录");}
@@ -1369,7 +1404,7 @@ function renderTrain(){
 function delTrain(idx){if(!confirm("删除这条训练记录？可到「回收站」恢复"))return;const it=DB.trainings[idx];if(!it)return;trashPush("train",it);DB.trainings.splice(idx,1);save();renderTrain();renderToday();renderProgress();}
 function editTraining(idx){const rec=DB.trainings[idx];if(!rec)return;$("he_idx").value=idx;$("he_title").textContent=rec.date+" · "+(rec.template||"训练");$("he_items").innerHTML=rec.items.map((it,i)=>`<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(it.name)}</span><label class="chkline"><input type="checkbox" class="chk" data-k="done" ${it.done?"checked":""}>完成</label><button class="delete" onclick="delHistItem(${i})">移除</button></div><div class="row"><input class="mini" placeholder="组" data-k="sets" value="${esc(it.sets)}"><input class="mini" placeholder="次" data-k="reps" value="${esc(it.reps)}"><input class="mini" placeholder="kg" data-k="weight" value="${esc(it.weight)}"></div></div>`).join("");const acts=allActions();$("he_add").innerHTML='<option value="">+ 添加动作...</option>'+acts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");$("hist_edit").style.display="block";$("hist_edit").scrollIntoView({behavior:"smooth"});}
 function delHistItem(i){const idx=+$("he_idx").value;DB.trainings[idx].items.splice(i,1);editTraining(idx);}
-function addHistItem(){const id=$("he_add").value;if(!id)return;const a=getAct(id);if(!a)return;const idx=+$("he_idx").value;DB.trainings[idx].items.push({actionId:a.id,name:a.name,done:false,sets:"",reps:"",weight:""});$("he_add").value="";editTraining(idx);}
+function addHistItem(){const id=$("he_add").value;if(!id)return;const a=getAct(id);if(!a)return;const idx=+$("he_idx").value;if(DB.trainings[idx].items.length>=MAX_BACKUP_ITEMS_PER_TRAINING){alert("单次训练动作已达 "+MAX_BACKUP_ITEMS_PER_TRAINING+" 个上限");return;}DB.trainings[idx].items.push({actionId:a.id,name:a.name,done:false,sets:"",reps:"",weight:""});$("he_add").value="";editTraining(idx);}
 function saveHistEdit(){const idx=+$("he_idx").value;const items=[...$("he_items").querySelectorAll(".item")].map(el=>{const i=+el.dataset.i;const it=DB.trainings[idx].items[i];return {actionId:it?it.actionId:"",name:it?it.name:el.querySelector('.nm').textContent,done:el.querySelector('[data-k=done]').checked,sets:el.querySelector('[data-k=sets]').value||"",reps:el.querySelector('[data-k=reps]').value||"",weight:el.querySelector('[data-k=weight]').value||""};});DB.trainings[idx].items=items;save();$("hist_edit").style.display="none";renderTrain();renderToday();}
 /* ---------- 阶段标识 ----------
    历史沿革：最初是 <select> 旁边一个独立 <span> 徽章（与下拉框不同行）；
@@ -1436,7 +1471,7 @@ function loadTemplate(){
   /* 阶段不再在此屏展示（下拉框选项与图例都已去掉圆圈），查看/修改走「编辑此模板」 */
   $("tpl_items").innerHTML=ids.map((id,i)=>{const a=getAct(id);if(!a)return"";
     const last=lastLoadRec(id);
-    const lastHtml=last?`<div class="lastload">上次：${last.date.slice(5)} ${last.s||'-'}×${last.r||'-'}${last.w?' @'+last.w+'kg':''}${loadHint(id)}</div>`:'';
+    const lastHtml=last?`<div class="lastload">上次：${esc(last.date.slice(5))} ${esc(last.s||'-')}×${esc(last.r||'-')}${last.w?' @'+esc(last.w)+'kg':''}${loadHint(id)}</div>`:'';
     return `<div class="item" data-i="${i}"><div class="top"><span class="nmrow"><span class="nm">${esc(a.name)}</span>${lvTag(a)}</span><label class="chkline chk-sm">完成<input type="checkbox" class="chk" data-k="done"></label></div><div class="muted hint-t">${esc(a.how)}</div>${lastHtml}<div class="row"><input class="mini" placeholder="组" data-k="sets"><input class="mini" placeholder="次" data-k="reps"><input class="mini" placeholder="kg" data-k="weight"></div></div>`;
   }).join("");
   renderProgressCard();
@@ -1447,6 +1482,7 @@ function saveTraining(){
     return {actionId:a.id,name:a.name,done:el.querySelector('[data-k=done]').checked,sets:el.querySelector('[data-k=sets]').value||"",reps:el.querySelector('[data-k=reps]').value||"",weight:el.querySelector('[data-k=weight]').value||""};}).filter(Boolean);
   const rec={date,template:name,items,rpe:$("t_rpe").value||"",note:$("t_note").value.trim()};
   const i=DB.trainings.findIndex(x=>x.date===date&&x.template===name);
+  if(i<0&&DB.trainings.length>=MAX_BACKUP_RECORDS){alert("训练记录已达 "+MAX_BACKUP_RECORDS+" 条上限");return;}
   if(i>=0)DB.trainings[i]=rec;else DB.trainings.push(rec);
   DB.trainings.sort((a,b)=>a.date<b.date?-1:1);save();
   $("t_rpe").value="";$("t_note").value="";renderTrain();renderToday();
@@ -1458,10 +1494,12 @@ function renderEditList(){
   const acts=allActions();
   $("ed_list").innerHTML=acts.map(a=>{const on=editingIds.includes(a.id);return `<label class="editem"><input type="checkbox" ${on?"checked":""} onchange="toggleEdit('${a.id}',this.checked)"> <span><span class="nmrow"><b>${esc(a.name)}</b>${lvTag(a)}</span><br><span class="muted hint-t">${esc(a.how)}</span></span></label>`;}).join("");
 }
-function toggleEdit(id,on){if(on){if(!editingIds.includes(id))editingIds.push(id);}else{editingIds=editingIds.filter(x=>x!==id);}}
+function toggleEdit(id,on){if(on){if(!editingIds.includes(id)){if(editingIds.length>=MAX_BACKUP_ACTIONS_PER_TEMPLATE){alert("单个训练模板动作已达 "+MAX_BACKUP_ACTIONS_PER_TEMPLATE+" 个上限");renderEditList();return;}editingIds.push(id);}}else{editingIds=editingIds.filter(x=>x!==id);}}
 function addCustomAction(){
   const nm=$("ca_name").value.trim();const hw=$("ca_how").value.trim();
   if(!nm){alert("请填动作名");return;}
+  if(DB.customActions.length>=MAX_BACKUP_CUSTOM_ACTIONS){alert("自定义动作已达 "+MAX_BACKUP_CUSTOM_ACTIONS+" 个上限");return;}
+  if(editingIds.length>=MAX_BACKUP_ACTIONS_PER_TEMPLATE){alert("单个训练模板动作已达 "+MAX_BACKUP_ACTIONS_PER_TEMPLATE+" 个上限");return;}
   const id="c"+Date.now();
   DB.customActions.push({id,name:nm,how:hw,phase:"custom"});
   editingIds.push(id);save();
@@ -1493,7 +1531,15 @@ function renderDiet(){
   renderDietToday();renderAdded();
 }
 function switchCat(k){curCat=k;renderDiet();}
-function addMeal(id,cat){const r=(RECIPES[cat]||[]).find(x=>x.id===id);if(!r)return;const dt=todayStr();if(!DB.diets[dt])DB.diets[dt]={meals:[]};DB.diets[dt].meals.push({type:cat,name:r.name,kcal:r.kcal,p:r.p,f:r.f,c:r.c});save();renderAdded();renderDietToday();renderToday();}
+function ensureMealCapacity(date){
+  if(!DB.diets[date]){
+    if(Object.keys(DB.diets).length>=MAX_BACKUP_RECORDS){alert("饮食日志已达 "+MAX_BACKUP_RECORDS+" 天上限");return false;}
+    DB.diets[date]={meals:[]};
+  }
+  if(DB.diets[date].meals.length>=MAX_BACKUP_MEALS_PER_DAY){alert("当天饮食记录已达 "+MAX_BACKUP_MEALS_PER_DAY+" 条上限");return false;}
+  return true;
+}
+function addMeal(id,cat){const r=(RECIPES[cat]||[]).find(x=>x.id===id);if(!r)return;const dt=todayStr();if(!ensureMealCapacity(dt))return;DB.diets[dt].meals.push({type:cat,name:r.name,kcal:r.kcal,p:r.p,f:r.f,c:r.c});save();renderAdded();renderDietToday();renderToday();}
 function renderDietToday(){
   const d=DB.diets[todayStr()]||{meals:[]};let k=0,p=0,f=0,c=0;d.meals.forEach(m=>{k+=m.kcal||0;p+=m.p||0;f+=m.f||0;c+=m.c||0;});
   $("d_today").innerHTML=metricCards(k,p,f,c);
@@ -1511,7 +1557,7 @@ function manualMeal(){
   const p=parseFloat($("m_p").value)||0;
   const f=parseFloat($("m_f").value)||0;
   const c=parseFloat($("m_c").value)||0;
-  const dt=todayStr();if(!DB.diets[dt])DB.diets[dt]={meals:[]};DB.diets[dt].meals.push({type:"M",name,kcal,p,f,c});save();renderAdded();renderDietToday();renderToday();
+  const dt=todayStr();if(!ensureMealCapacity(dt))return;DB.diets[dt].meals.push({type:"M",name,kcal,p,f,c});save();renderAdded();renderDietToday();renderToday();
   $("m_name").value="";$("m_kcal").value="";$("m_p").value="";$("m_f").value="";$("m_c").value="";
   $("manual_form").style.display="none";
 }
@@ -1581,7 +1627,7 @@ function renderRef(){
 /* ---------- 数据 ---------- */
 function renderData(){
   const p=DB.profile;
-  $("d_profile").innerHTML=`档案：<b>${esc(ROOT.profiles[ROOT.active].name)}</b><br>性别 ${p.gender} ｜ 年龄 ${p.age} ｜ 身高 ${p.height}cm ｜ 起始 ${p.weightStart}kg ｜ 目标 ${p.weightGoal}kg<br>记录：体重 ${DB.weights.length} 条 ｜ 训练 ${DB.trainings.length} 次 ｜ 饮食日志 ${Object.keys(DB.diets).length} 天 ｜ 照片 ${DB.photos.length} 张 ｜ 自定义动作 ${DB.customActions.length} 个`;
+  $("d_profile").innerHTML=`档案：<b>${esc(ROOT.profiles[ROOT.active].name)}</b><br>性别 ${esc(p.gender)} ｜ 年龄 ${esc(p.age)} ｜ 身高 ${esc(p.height)}cm ｜ 起始 ${esc(p.weightStart)}kg ｜ 目标 ${esc(p.weightGoal)}kg<br>记录：体重 ${DB.weights.length} 条 ｜ 训练 ${DB.trainings.length} 次 ｜ 饮食日志 ${Object.keys(DB.diets).length} 天 ｜ 照片 ${DB.photos.length} 张 ｜ 自定义动作 ${DB.customActions.length} 个`;
   $("act_sel").value=String(DB.activity);
   renderTDEE();
 }
@@ -1612,8 +1658,255 @@ function renderTDEE(){
     <div class="mt-8"><button class="act2" onclick="applyIntake(${ri.cal},${ri.pro})">应用为今日目标</button>
     <span class="muted">（当前目标 ${DB.targets.calories}kcal / 蛋白 ${DB.targets.protein}g）</span></div>`;
 }
-function exportData(){const blob=new Blob([JSON.stringify(ROOT,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="fitlog_data_"+todayStr()+".json";a.click();$("d_msg").textContent="已导出全部档案，把文件存到云盘/微信即可在别处导入。";}
-function importData(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!d.profiles){alert("文件格式错误（需包含 profiles）");return;}if(!confirm("导入将覆盖本机现有数据（全部档案），确定继续？"))return;Object.values(d.profiles).forEach(p=>{p.data=mergeData(p.data);});if(!d.profiles[d.active])d.active=Object.keys(d.profiles)[0];ROOT=d;ensureAvatars();DB=ROOT.profiles[ROOT.active].data;save();$("d_msg").textContent="导入成功！";renderAll();}catch(e){alert("文件格式错误");}};rd.readAsText(f);inp.value="";}
+function backupSummary(root){
+  return Object.values(root.profiles).reduce((sum,p)=>{
+    const d=p.data;
+    sum.profiles++;
+    sum.weights+=d.weights.length;
+    sum.trainings+=d.trainings.length;
+    sum.dietDays+=Object.keys(d.diets).length;
+    sum.photos+=d.photos.length;
+    sum.customActions+=d.customActions.length;
+    return sum;
+  },{profiles:0,weights:0,trainings:0,dietDays:0,photos:0,customActions:0});
+}
+function createBackupEnvelope(root,now){
+  return {
+    format:BACKUP_FORMAT,
+    formatVersion:BACKUP_FORMAT_VERSION,
+    exportedAt:(now||new Date()).toISOString(),
+    summary:backupSummary(root),
+    data:root
+  };
+}
+function backupFilename(now){
+  const d=now||new Date(),p=n=>(""+n).padStart(2,"0");
+  return "fitlog_backup_"+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"_"+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds())+".json";
+}
+function assertBackupFileSize(size){
+  if(size>MAX_BACKUP_BYTES)throw new Error("备份文件过大（上限 20 MB）");
+}
+function assertSafeBackupValue(value){
+  if(!value||typeof value!=="object")return;
+  Object.keys(value).forEach(key=>{
+    if(key==="__proto__"||key==="prototype"||key==="constructor")throw new Error("备份包含不安全字段："+key);
+    assertSafeBackupValue(value[key]);
+  });
+}
+function assertBackupRoot(root){
+  if(!root||typeof root!=="object"||Array.isArray(root)||!root.profiles||typeof root.profiles!=="object"||Array.isArray(root.profiles)||!Object.keys(root.profiles).length){
+    throw new Error("备份中没有可恢复的档案");
+  }
+  if(Object.keys(root.profiles).length>MAX_BACKUP_PROFILES)throw new Error("备份中的档案数量超过 "+MAX_BACKUP_PROFILES+" 个上限");
+}
+function isSafeBackupPhoto(photo){
+  return Boolean(photo&&typeof photo==="object"&&typeof photo.data==="string"&&/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photo.data));
+}
+function isBackupDate(value){
+  if(typeof value!=="string")return false;
+  const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(value);if(!match)return false;
+  const year=+match[1],month=+match[2],day=+match[3],date=new Date(0);
+  date.setUTCHours(0,0,0,0);date.setUTCFullYear(year,month-1,day);
+  return date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day;
+}
+function isBackupRecord(value){return Boolean(value&&typeof value==="object"&&!Array.isArray(value));}
+function isBackupNumber(value){return typeof value==="number"&&Number.isFinite(value);}
+function isOptionalBackupNumber(value){return value==null||isBackupNumber(value);}
+function isOptionalBackupString(value){return value==null||typeof value==="string";}
+function isWeightBackupRecord(item){
+  return isBackupRecord(item)&&isBackupDate(item.date)&&isBackupNumber(item.weight)&&
+    isOptionalBackupNumber(item.waist)&&isOptionalBackupNumber(item.hip)&&isOptionalBackupString(item.note);
+}
+function isTrainingBackupRecord(item){
+  return isBackupRecord(item)&&isBackupDate(item.date)&&typeof item.template==="string"&&Array.isArray(item.items)&&item.items.length<=MAX_BACKUP_ITEMS_PER_TRAINING&&
+    isOptionalBackupString(item.note)&&(item.rpe==null||isBackupNumber(item.rpe)||(typeof item.rpe==="string"&&/^(?:10|[1-9])?$/.test(item.rpe)))&&
+    item.items.every(row=>isBackupRecord(row)&&typeof row.name==="string"&&typeof row.done==="boolean"&&
+      isOptionalBackupString(row.actionId)&&[row.sets,row.reps,row.weight].every(value=>value==null||typeof value==="string"||isBackupNumber(value)));
+}
+function isMealBackupRecord(item){
+  return isBackupRecord(item)&&typeof item.name==="string"&&isOptionalBackupString(item.type)&&
+    [item.kcal,item.p,item.f,item.c].every(isBackupNumber);
+}
+function isTrashBackupRecord(item){
+  if(!isBackupRecord(item)||!isBackupRecord(item.data))return false;
+  if(item.type==="weight")return isWeightBackupRecord(item.data);
+  if(item.type==="train")return isTrainingBackupRecord(item.data);
+  if(item.type==="photo")return isBackupDate(item.data.date)&&isSafeBackupPhoto(item.data);
+  if(item.type==="meal")return isBackupDate(item.data.date)&&isMealBackupRecord(item.data.meal);
+  return false;
+}
+function normalizeBackupRoot(root){
+  const ids=Object.keys(root.profiles);
+  ids.forEach(id=>{
+    if(!/^[A-Za-z0-9_-]{1,80}$/.test(id))throw new Error("档案标识格式错误");
+    const p=root.profiles[id];
+    if(!p||typeof p!=="object"||Array.isArray(p)||!p.data||typeof p.data!=="object"||Array.isArray(p.data)){
+      throw new Error("档案数据损坏："+id);
+    }
+    ["weights","trainings","photos","customActions","trash"].forEach(key=>{
+      if(key in p.data&&!Array.isArray(p.data[key]))throw new Error("档案 "+id+" 的 "+key+" 格式错误");
+    });
+    ["profile","targets","diets","templates","templateMeta"].forEach(key=>{
+      if(key in p.data&&(!p.data[key]||typeof p.data[key]!=="object"||Array.isArray(p.data[key])))throw new Error("档案 "+id+" 的 "+key+" 格式错误");
+    });
+    if((p.data.weights||[]).length>MAX_BACKUP_RECORDS)throw new Error("档案 "+id+" 的体重记录超过 "+MAX_BACKUP_RECORDS+" 条上限");
+    if((p.data.trainings||[]).length>MAX_BACKUP_RECORDS)throw new Error("档案 "+id+" 的训练记录超过 "+MAX_BACKUP_RECORDS+" 条上限");
+    if(Object.keys(p.data.diets||{}).length>MAX_BACKUP_RECORDS)throw new Error("档案 "+id+" 的饮食记录超过 "+MAX_BACKUP_RECORDS+" 天上限");
+    if((p.data.photos||[]).length>MAX_BACKUP_PHOTOS)throw new Error("档案 "+id+" 的照片超过 "+MAX_BACKUP_PHOTOS+" 张上限");
+    if((p.data.customActions||[]).length>MAX_BACKUP_CUSTOM_ACTIONS)throw new Error("档案 "+id+" 的自定义动作超过 "+MAX_BACKUP_CUSTOM_ACTIONS+" 个上限");
+    if((p.data.trash||[]).length>MAX_BACKUP_TRASH)throw new Error("档案 "+id+" 的回收站记录超过 "+MAX_BACKUP_TRASH+" 条上限");
+    (p.data.trash||[]).forEach(item=>{
+      if(!item||typeof item!=="object"||typeof item.uid!=="string"||!/^[A-Za-z0-9_-]{1,100}$/.test(item.uid)){
+        throw new Error("档案 "+id+" 包含无效的回收站标识");
+      }
+    });
+    if((p.data.customActions||[]).some(action=>!action||typeof action!=="object"||typeof action.id!=="string"||!/^[A-Za-z0-9_-]{1,100}$/.test(action.id))){
+      throw new Error("档案 "+id+" 包含无效的动作标识");
+    }
+    const dated=(p.data.weights||[]).concat(p.data.trainings||[],p.data.photos||[]);
+    if(dated.some(item=>!item||!isBackupDate(item.date))||Object.keys(p.data.diets||{}).some(date=>!isBackupDate(date))||(p.data.trash||[]).some(item=>!isBackupDate(item.deletedAt))){
+      throw new Error("档案 "+id+" 包含无效的记录日期");
+    }
+    if((p.data.weights||[]).some(item=>!isWeightBackupRecord(item)))throw new Error("档案 "+id+" 的体重记录格式错误");
+    if((p.data.trainings||[]).some(item=>isBackupRecord(item)&&Array.isArray(item.items)&&item.items.length>MAX_BACKUP_ITEMS_PER_TRAINING)){
+      throw new Error("档案 "+id+" 的单次训练动作超过 "+MAX_BACKUP_ITEMS_PER_TRAINING+" 个上限");
+    }
+    if((p.data.trainings||[]).some(item=>!isTrainingBackupRecord(item)))throw new Error("档案 "+id+" 的训练记录格式错误");
+    if(Object.values(p.data.diets||{}).some(day=>!isBackupRecord(day)||!Array.isArray(day.meals)||day.meals.length>MAX_BACKUP_MEALS_PER_DAY||day.meals.some(item=>!isMealBackupRecord(item)))){
+      throw new Error("档案 "+id+" 的饮食记录格式错误");
+    }
+    if("activity" in p.data&&!isBackupNumber(p.data.activity))throw new Error("档案 "+id+" 的活动系数格式错误");
+    if(p.data.templates&&Object.keys(p.data.templates).length>MAX_BACKUP_TEMPLATES){
+      throw new Error("档案 "+id+" 的训练模板超过 "+MAX_BACKUP_TEMPLATES+" 个上限");
+    }
+    if(p.data.templates&&Object.values(p.data.templates).some(items=>Array.isArray(items)&&items.length>MAX_BACKUP_ACTIONS_PER_TEMPLATE)){
+      throw new Error("档案 "+id+" 的单个训练模板动作超过 "+MAX_BACKUP_ACTIONS_PER_TEMPLATE+" 个上限");
+    }
+    if(p.data.templates&&Object.values(p.data.templates).some(items=>!Array.isArray(items)||items.some(actionId=>typeof actionId!=="string"))){
+      throw new Error("档案 "+id+" 的训练模板格式错误");
+    }
+    if(p.data.profile&&(!isOptionalBackupString(p.data.profile.gender)||["age","height","weightStart","weightGoal"].some(key=>key in p.data.profile&&!isBackupNumber(p.data.profile[key])))){
+      throw new Error("档案 "+id+" 的个人信息格式错误");
+    }
+    if(p.data.targets&&["calories","protein","fat","carbs"].some(key=>key in p.data.targets&&!isBackupNumber(p.data.targets[key]))){
+      throw new Error("档案 "+id+" 的摄入目标格式错误");
+    }
+    const photos=(p.data.photos||[]).concat((p.data.trash||[]).filter(item=>item&&item.type==="photo").map(item=>item.data));
+    if(photos.some(photo=>!isSafeBackupPhoto(photo)))throw new Error("档案 "+id+" 包含不安全的照片数据");
+    if((p.data.trash||[]).some(item=>!isTrashBackupRecord(item)))throw new Error("档案 "+id+" 的回收站记录格式错误");
+    p.id=id;
+    p.name=typeof p.name==="string"&&p.name.trim()?p.name.trim():"未命名档案";
+    p.data=mergeData(p.data);
+  });
+  if(!Object.prototype.hasOwnProperty.call(root.profiles,root.active))root.active=ids[0];
+  return ensureAvatarsOn(root);
+}
+function parseBackupText(text){
+  let parsed;
+  try{parsed=JSON.parse(text);}catch(error){throw new Error("备份文件不是有效的 JSON");}
+  assertSafeBackupValue(parsed);
+  const hasFormat=Boolean(parsed&&Object.prototype.hasOwnProperty.call(parsed,"format"));
+  const legacy=Boolean(!hasFormat&&parsed&&parsed.profiles);
+  if(!legacy&&(!parsed||parsed.format!==BACKUP_FORMAT))throw new Error("无法识别的备份格式");
+  if(!legacy&&parsed.formatVersion!==BACKUP_FORMAT_VERSION)throw new Error("不支持此备份版本");
+  let root=legacy?parsed:parsed.data;
+  assertBackupRoot(root);
+  root=normalizeBackupRoot(root);
+  return {
+    root:root,
+    legacy:legacy,
+    exportedAt:legacy?null:(parsed.exportedAt||null),
+    summary:backupSummary(root)
+  };
+}
+function commitImportedRoot(root){
+  const previous=JSON.stringify(ROOT);
+  try{
+    localStorage.setItem(DB_KEY,JSON.stringify(root));
+  }catch(error){
+    throw new Error("无法保存导入数据，本机存储空间可能不足");
+  }
+  LAST_IMPORT_SNAPSHOT=previous;
+  ROOT=root;
+  DB=ROOT.profiles[ROOT.active].data;
+  storageOK=true;
+}
+function undoImport(){
+  if(!LAST_IMPORT_SNAPSHOT)return false;
+  let previous;
+  try{
+    previous=parseBackupText(LAST_IMPORT_SNAPSHOT).root;
+    localStorage.setItem(DB_KEY,JSON.stringify(previous));
+  }catch(error){
+    alert("无法恢复导入前的数据，本机存储空间可能不足");
+    return false;
+  }
+  ROOT=previous;
+  DB=ROOT.profiles[ROOT.active].data;
+  LAST_IMPORT_SNAPSHOT=null;
+  renderAll();
+  const undo=$("undo_import");if(undo)undo.style.display="none";
+  $("d_msg").textContent="已恢复导入前的数据。";
+  return true;
+}
+function exportData(){
+  const now=new Date(),backup=createBackupEnvelope(ROOT,now);
+  let text,blob;
+  try{
+    text=JSON.stringify(backup,null,2);
+    parseBackupText(text);
+    blob=new Blob([text],{type:"application/json"});
+    assertBackupFileSize(blob.size);
+  }catch(error){
+    alert("无法导出备份："+error.message);
+    return false;
+  }
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=backupFilename(now);a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),0);
+  const s=backup.summary;
+  $("d_msg").textContent="备份已导出："+s.profiles+" 个档案、"+s.weights+" 条体重、"+s.trainings+" 次训练、"+s.photos+" 张照片。";
+  return true;
+}
+function importPreview(parsed,fileName){
+  const s=parsed.summary;
+  let time="旧版备份（无导出时间）";
+  if(parsed.exportedAt){
+    const d=new Date(parsed.exportedAt);
+    time=isNaN(d.getTime())?"导出时间未知":"备份时间 "+d.toLocaleString("zh-CN",{hour12:false});
+  }
+  return "准备导入「"+fileName+"」\n"+time+"\n\n"+
+    "档案 "+s.profiles+" 个 ｜ 体重 "+s.weights+" 条 ｜ 训练 "+s.trainings+" 次\n"+
+    "饮食 "+s.dietDays+" 天 ｜ 照片 "+s.photos+" 张 ｜ 自定义动作 "+s.customActions+" 个\n\n"+
+    "导入后将覆盖本机全部档案。确定继续？";
+}
+function importData(inp){
+  const f=inp.files[0];if(!f)return;
+  try{assertBackupFileSize(f.size);}catch(error){alert("无法导入："+error.message);inp.value="";return;}
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const parsed=parseBackupText(rd.result);
+      if(!confirm(importPreview(parsed,f.name||"备份文件")))return;
+      commitImportedRoot(parsed.root);
+      try{
+        renderAll();
+      }catch(renderError){
+        if(!undoImport())throw new Error("备份数据无法完整显示，且无法自动恢复原数据");
+        throw new Error("备份数据无法完整显示，已恢复原数据");
+      }
+      const undo=$("undo_import");if(undo)undo.style.display="inline-flex";
+      const s=parsed.summary;
+      $("d_msg").textContent="导入成功："+s.profiles+" 个档案、"+s.weights+" 条体重、"+s.trainings+" 次训练、"+s.photos+" 张照片。";
+    }catch(error){
+      alert("无法导入："+error.message);
+    }finally{
+      inp.value="";
+    }
+  };
+  rd.onerror=()=>{alert("无法读取备份文件");inp.value="";};
+  rd.readAsText(f);
+}
 function clearData(){if(confirm("确定清空当前档案「"+ROOT.profiles[ROOT.active].name+"」的全部数据？此操作不可恢复（请先导出备份）。")){ROOT.profiles[ROOT.active].data=freshData();DB=ROOT.profiles[ROOT.active].data;save();renderAll();$("d_msg").textContent="已清空当前档案数据。";}}
 
 /* ---------- 左右滑动切换页面 ---------- */
