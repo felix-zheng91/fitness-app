@@ -210,8 +210,9 @@ nav.tabbar button:focus-visible{outline:2px solid var(--brand-l);outline-offset:
 .muted{color:var(--muted);font-size:var(--f-sm);}
 .center{text-align:center;}
 .bd{display:inline-block;font-size:var(--f-xs);padding:2px 7px;border-radius:var(--r-xs);background:var(--brand-bg);color:var(--brand);margin:4px 4px 0 0;font-weight:700;}
-.item .nmrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
-.tag{font-size:var(--f-xs);background:var(--brand);color:#fff;padding:2px 7px;border-radius:var(--r-xs);white-space:nowrap;font-weight:700;flex:0 0 auto;}
+.nmrow{display:flex;align-items:center;flex-wrap:wrap;min-width:0;}
+.tag{font-size:var(--f-xs);background:var(--brand);color:#fff;padding:2px 7px;border-radius:var(--r-xs);white-space:nowrap;font-weight:700;flex:0 0 auto;margin-left:6px;}
+.tag.base{background:var(--soft);color:var(--muted);}
 
 /* 提示条 */
 .tip{background:var(--amber-bg);border:1px solid var(--amber-ln);border-radius:var(--r-sm);padding:11px 12px;margin:10px 0;font-size:var(--f-md);line-height:1.6;}
@@ -350,6 +351,9 @@ button.wfull{width:100%;}
 .editem{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;margin:6px 0;display:flex;align-items:flex-start;gap:10px;font-size:var(--f-md);cursor:pointer;transition:background .15s,border-color .15s;}
 .editem:hover{background:var(--soft-2);border-color:var(--line-2);}
 .editem input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--brand);cursor:pointer;}
+/* 动作库里名字后面还跟着 <br> 换行的做法说明。.nmrow 默认是块级 flex，
+   会把那个 <br> 顶成一行空行，所以这里降级成 inline-flex。 */
+.editem .nmrow{display:inline-flex;}
 
 /* Tab（饮食分类） */
 /* 饮食分类：胶囊改方角小块，与大圆角的「手账感」区分开 */
@@ -1023,6 +1027,29 @@ function esc(s){return (s==null?"":""+s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"
 function getAct(id){return PLAN.actions.find(a=>a.id===id)||(DB.customActions||[]).find(a=>a.id===id)||null;}
 function allActions(){return PLAN.actions.concat(DB.customActions||[]);}
 
+/* ---------- 动作等级（基础 / 进阶） ----------
+   等级表**只列「进阶」的动作 id**，不在表里的一律按「基础」处理（自定义动作也在内）。
+   为什么不从 phase 推导：phase 描述的是「部位 / 场景」，不是难度。照它推会得出
+   「罗马尼亚硬拉 = 基础」这种结果——rdl 的 phase 是 lower,full，和臀桥一样，
+   但它只出现在「腿·臀（杠铃/器械）」这类进阶模板里；
+   反过来 walk（快走）phase 是 all，被 8 个基础模板引用，是实打实的基础。
+   要精确只能显式声明。调整等级就增删下面这一行里的 id。 */
+const ADV_ACTIONS=[
+  /* 杠铃 / 器械（健身房分化） */
+  "bb_squat","legpress","rdl","legcurl","calf","zercher",
+  "bench","incline_bench","incline_db","incline_db_db","pecdeck","tri_push","dip_assist","oh_ext",
+  "bb_ohp","db_ohp","ohp","lateral","seated_lateral",
+  "deadlift","bb_row","cable_row","lat","curl","reardelt","facepull",
+  /* 单杠 / 引体家族 */
+  "pullup","pullup_assist","band_pullup","neg_pullup","weighted_pullup",
+  /* 自重，但只出现在进阶模板里的核心 / 三头动作 */
+  "legraise","tri_dip",
+  /* 弹力带，但归在健身房拉力组里 */
+  "band_facepull"
+];
+function actLevel(a){return (a&&ADV_ACTIONS.indexOf(a.id)>=0)?"进阶":"基础";}
+function lvTag(a){const l=actLevel(a);return `<span class="tag${l==="进阶"?"":" base"}">${l}</span>`;}
+
 /* ---------- 档案（多 profile） ---------- */
 function colorFor(name){
   const palette=['#ff7a8a','#7c83ff','#36c5a8','#ffa94d','#5ec5f0','#b388ff','#ff6b6b','#4dd4ac','#f6a609','#9b8cff'];
@@ -1442,7 +1469,7 @@ function loadTemplate(){
   $("tpl_items").innerHTML=ids.map((id,i)=>{const a=getAct(id);if(!a)return"";
     const last=lastLoadRec(id);
     const lastHtml=last?`<div class="lastload">上次：${last.date.slice(5)} ${last.s||'-'}×${last.r||'-'}${last.w?' @'+last.w+'kg':''}${loadHint(id)}</div>`:'';
-    return `<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(a.name)}</span><label class="chkline chk-sm">完成<input type="checkbox" class="chk" data-k="done"></label></div><div class="muted hint-t">${esc(a.how)}</div>${lastHtml}<div class="row"><input class="mini" placeholder="组" data-k="sets"><input class="mini" placeholder="次" data-k="reps"><input class="mini" placeholder="kg" data-k="weight"></div></div>`;
+    return `<div class="item" data-i="${i}"><div class="top"><span class="nmrow"><span class="nm">${esc(a.name)}</span>${lvTag(a)}</span><label class="chkline chk-sm">完成<input type="checkbox" class="chk" data-k="done"></label></div><div class="muted hint-t">${esc(a.how)}</div>${lastHtml}<div class="row"><input class="mini" placeholder="组" data-k="sets"><input class="mini" placeholder="次" data-k="reps"><input class="mini" placeholder="kg" data-k="weight"></div></div>`;
   }).join("");
   renderProgressCard();
 }
@@ -1461,7 +1488,7 @@ function showEdit(){const name=$("tpl_sel").value;$("ed_name").textContent=name;
 function hideEdit(){$("tpl_edit").style.display="none";editingIds=null;}
 function renderEditList(){
   const acts=allActions();
-  $("ed_list").innerHTML=acts.map(a=>{const on=editingIds.includes(a.id);return `<label class="editem"><input type="checkbox" ${on?"checked":""} onchange="toggleEdit('${a.id}',this.checked)"> <span><b>${esc(a.name)}</b><br><span class="muted hint-t">${esc(a.how)}</span></span></label>`;}).join("");
+  $("ed_list").innerHTML=acts.map(a=>{const on=editingIds.includes(a.id);return `<label class="editem"><input type="checkbox" ${on?"checked":""} onchange="toggleEdit('${a.id}',this.checked)"> <span><span class="nmrow"><b>${esc(a.name)}</b>${lvTag(a)}</span><br><span class="muted hint-t">${esc(a.how)}</span></span></label>`;}).join("");
 }
 function toggleEdit(id,on){if(on){if(!editingIds.includes(id))editingIds.push(id);}else{editingIds=editingIds.filter(x=>x!==id);}}
 function addCustomAction(){
