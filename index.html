@@ -210,7 +210,8 @@ nav.tabbar button:focus-visible{outline:2px solid var(--brand-l);outline-offset:
 .muted{color:var(--muted);font-size:var(--f-sm);}
 .center{text-align:center;}
 .bd{display:inline-block;font-size:var(--f-xs);padding:2px 7px;border-radius:var(--r-xs);background:var(--brand-bg);color:var(--brand);margin:4px 4px 0 0;font-weight:700;}
-.tag{font-size:var(--f-xs);background:var(--brand);color:#fff;padding:2px 7px;border-radius:var(--r-xs);margin-left:6px;white-space:nowrap;font-weight:700;}
+.item .nmrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
+.tag{font-size:var(--f-xs);background:var(--brand);color:#fff;padding:2px 7px;border-radius:var(--r-xs);white-space:nowrap;font-weight:700;flex:0 0 auto;}
 
 /* 提示条 */
 .tip{background:var(--amber-bg);border:1px solid var(--amber-ln);border-radius:var(--r-sm);padding:11px 12px;margin:10px 0;font-size:var(--f-md);line-height:1.6;}
@@ -1493,7 +1494,7 @@ let curCat="B";
 function renderDiet(){
   $("d_tabs").innerHTML=MEAL_CATS.map(([k,n])=>`<button class="${k===curCat?'on':''}" onclick="switchCat('${k}')">${n}</button>`).join("");
   const list=RECIPES[curCat]||[];
-  $("d_list").innerHTML=list.map(r=>`<div class="item"><div class="top"><span class="nm">${esc(r.name)}</span><button class="act2" onclick="addMeal('${r.id}','${curCat}')">+ 加入</button></div><div class="muted hint-t">${r.kcal}kcal ｜ 蛋白${r.p}g ｜ 脂肪${r.f}g ｜ 碳水${r.c}g${r.tag?'<span class="tag">'+esc(r.tag)+'</span>':''}</div></div>`).join("");
+  $("d_list").innerHTML=list.map(r=>`<div class="item"><div class="top"><span class="nmrow"><span class="nm">${esc(r.name)}</span>${r.tag?'<span class="tag">'+esc(r.tag)+'</span>':''}</span><button class="act2" onclick="addMeal('${r.id}','${curCat}')">+ 加入</button></div><div class="muted hint-t">${r.kcal}kcal ｜ 蛋白${r.p}g ｜ 脂肪${r.f}g ｜ 碳水${r.c}g</div></div>`).join("");
   renderDietToday();renderAdded();
 }
 function switchCat(k){curCat=k;renderDiet();}
