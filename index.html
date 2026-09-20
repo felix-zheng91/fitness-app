@@ -3,106 +3,473 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FitLog · 健身打卡本</title>
 <style>
-:root{--bg:#f6f4ef;--card:#fff;--brand:#3a7d6e;--brand2:#e08a5b;--soft:#eef4f1;--line:#e4e0d8;--ink:#2b2b2b;--muted:#6b6b6b;--ok:#2f7a4a;--warn:#c0392b;}
+/* ============================================================
+   FitLog · 设计体系
+   1) 设计令牌  2) 基础元素  3) 布局与导航  4) 卡片与列表
+   5) 表单与按钮  6) 指标与进度  7) 各页专用  8) 响应式
+   ============================================================ */
+
+/* ---------- 1) 设计令牌（D · 紧凑控制台） ----------
+   取向：冷灰白底 + 单一蓝。颜色只用来标状态，不用来装饰。
+   密度靠「表格化布局 + 收窄内边距 + 收紧行高」实现，不靠无节制地压小字号。 */
+:root{
+  --brand:#2a62c4; --brand-d:#1f4b9b; --brand-l:#5b8be0; --brand-2:#d9560f;
+  --bg:#f6f7f9; --bg-2:#fff; --card:#fff; --soft:#eef2f8; --soft-2:#f7f9fc;
+  --line:#e3e6eb; --line-2:#d2d7de;
+  --ink:#171a1e; --ink-2:#464d56; --muted:#79818b; --faint:#a8afb8;
+  --ok:#1c7a45; --ok-bg:#e7f4ec; --warn:#c33b28; --warn-bg:#fdecea;
+  --amber:#a9690c; --amber-bg:#fcf2e0; --amber-ln:#f0dcb4;
+  /* 品牌色的浅底与浅边：替代散落在各处的 #cfe4dc 之类硬编码值 */
+  --brand-bg:#eaf0fb; --brand-ln:#c7d7f2;
+  --r-xs:4px; --r-sm:5px; --r-md:7px; --r-lg:10px; --r-full:999px;
+  /* D 版取消投影：层次由 1px 边框与底色差表达。--sh-3 只留给图片灯箱。 */
+  --sh-1:none; --sh-2:none; --sh-3:0 12px 32px rgba(18,22,28,.28);
+  --f-xs:11px; --f-sm:12px; --f-md:13px; --f-lg:14.5px; --f-xl:17px; --f-2xl:26px;
+  --tap:40px;
+  /* 等宽数字：表格里右对齐时字宽一致，不会参差 */
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  /* 底部 tab bar 的实测高度：body 用它预留出等高空白 */
+  --tabbar:56px;
+}
+
+/* ---------- 2) 基础元素 ---------- */
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;padding-bottom:64px;overflow-x:clip;}
-header{background:linear-gradient(135deg,var(--brand),#2f6358);color:#fff;padding:16px 16px 14px;}
-header h1{margin:0;font-size:18px;}
-header p{margin:3px 0 0;font-size:12.5px;opacity:.9;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{
+  margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.5;letter-spacing:.005em;
+  /* 底部 tab bar 是 fixed 的，必须预留等高空白，否则每页最后一行会被压在导航下面 */
+  padding-bottom:calc(var(--tabbar) + 16px + env(safe-area-inset-bottom,0px));
+  overflow-x:clip;-webkit-font-smoothing:antialiased;font-size:var(--f-md);
+  /* 各页高度不同，滚动条有无会改变视口宽度 → 切页时内容横向跳动。
+     这里常驻滚动条槽位，使所有页面占用完全相同的宽度。
+     滚动条本身也一并瘦身对齐配色，避免桌面端出现一条突兀的灰色粗条。 */
+  overflow-y:scroll;scrollbar-gutter:stable;
+}
+/* 桌面端滚动条：细、低对比，与页面配色一致 */
+html{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;}
+body::-webkit-scrollbar{width:10px;}
+body::-webkit-scrollbar-track{background:transparent;}
+body::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:3px solid var(--bg);}
+body::-webkit-scrollbar-thumb:hover{background:var(--faint);}
+/* 分区标题在 D 版退化为「面板标签」：小、灰、加字距。
+   层级交给表格结构和大号数字表达，不靠标题抢注意力。 */
+h2{font-size:var(--f-xs);margin:0 0 9px;color:var(--muted);letter-spacing:.07em;font-weight:800;}
+h3{font-size:var(--f-md);margin:14px 0 7px;color:var(--ink);font-weight:700;}
+p{margin:8px 0}
+label{display:block;font-size:var(--f-sm);color:var(--muted);margin:10px 0 4px;font-weight:500;}
+b,strong{font-weight:700}
+a{color:var(--brand)}
+
+/* 输入元素：统一 44px 触控高度，修复跨浏览器高度不一 */
+input,select,textarea{
+  width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line-2);border-radius:var(--r-sm);
+  font-size:15px;font-family:inherit;background:var(--card);color:var(--ink);
+  line-height:1.35;transition:border-color .15s,box-shadow .15s;font-weight:500;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(58,125,110,.14);}
+input::placeholder,textarea::placeholder{color:var(--faint);font-weight:400;}
+input[type="date"]{-webkit-appearance:none;appearance:none;background:var(--card);min-height:var(--tap);}
+input[type="number"]{-moz-appearance:textfield;}
+select{
+  -webkit-appearance:none;appearance:none;padding-right:34px;background-repeat:no-repeat;
+  background-position:right 11px center;background-size:11px 7px;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='%23787670' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+select::-ms-expand{display:none}
+textarea{resize:vertical;min-height:64px}
+input[type="file"]{display:none}
+
+/* ---------- 3) 布局与导航 ---------- */
+/* 顶栏在 D 版是「应用栏」而不是「品牌色横幅」：白底、下边框、品牌色只做 logo 与强调。
+   绿色渐变 hero 与冷灰控制台的观感是冲突的，所以整块重做。 */
+header{
+  background:var(--bg-2);color:var(--ink);
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 11px;
+  border-bottom:1px solid var(--line);
+}
+header h1{margin:0;font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--brand);display:flex;align-items:center;gap:7px;}
+header h1::before{content:"";width:6px;height:6px;border-radius:1px;background:var(--brand);flex:none;}
+header p{margin:3px 0 0;font-size:var(--f-sm);color:var(--muted);}
 .header-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-.hd-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
-.pf-avatars{display:flex;align-items:center;gap:7px;flex-wrap:wrap;max-width:62vw;padding-bottom:2px;}
-.avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;line-height:32px;color:#fff;font-weight:700;font-size:15px;cursor:pointer;border:2px solid transparent;flex:0 0 auto;transition:transform .12s,box-shadow .12s;user-select:none;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.hd-left{min-width:0;flex:1 1 150px;}
+.hd-right{display:flex;align-items:center;gap:10px;margin-left:auto;max-width:100%;}
+.pf-avatars{display:flex;align-items:center;gap:7px;flex-wrap:wrap;max-width:56vw;padding:2px 0;}
+.avatar{
+  width:32px;height:32px;border-radius:50%;overflow:hidden;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;
+  color:#fff;font-weight:700;font-size:13px;cursor:pointer;flex:0 0 auto;
+  transition:transform .14s,box-shadow .14s;user-select:none;
+  /* 白缝与描边都画在盒外（box-shadow 不占盒内空间）：圆形内容区才是完整的 16px。
+     原来用 border:2px solid var(--card) 会往里挤 2px，卡通头像的耳朵会被切平。 */
+  box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--line);
+}
 .avatar:hover{transform:translateY(-1px) scale(1.06);}
-.avatar.active{border-color:#fff;box-shadow:0 0 0 2px var(--brand2),0 1px 4px rgba(0,0,0,.3);}
-.avatar.add{background:rgba(255,255,255,.18);font-size:22px;font-weight:400;color:#fff;}
-.avatar.add:hover{background:rgba(255,255,255,.32);}
-.mini-btn{background:var(--brand2);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap;font-weight:600;}
-.mini-btn:hover{filter:brightness(1.08);}
-.mini-btn.del{background:#e74c3c;}
-.pf-list{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
-.pf-row{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft);}
-.pf-row.active{border-color:var(--brand2);background:#fff;}
-.pf-meta{flex:1;min-width:0;}
-.pf-name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;}
-.cur-tag{background:var(--brand2);color:#fff;font-size:10px;padding:1px 6px;border-radius:6px;font-weight:600;}
-.pf-sub{font-size:12px;color:var(--muted);}
-.pf-ops{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
-nav{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;}
-nav::-webkit-scrollbar{display:none;height:0;}
-nav button{flex:0 0 auto;border:none;background:none;padding:9px 6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;text-align:center;border-bottom:2px solid transparent;scroll-snap-align:center;}
-nav button.active{color:var(--brand);font-weight:700;}
-.nav-slider{position:absolute;bottom:1px;left:0;height:2px;width:0;background:var(--brand);border-radius:2px;transition:transform .25s ease,width .25s ease;pointer-events:none;}
-.page{display:none;padding:14px;max-width:760px;margin:0 auto;}
-.page.active{display:block;animation:pageIn .22s ease both;}
-@keyframes pageIn{from{opacity:.35;transform:translateX(var(--px,14px));}to{opacity:1;transform:none;}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:14px;}
-h2{font-size:17px;margin:0 0 10px;color:var(--brand);}
-h3{font-size:14.5px;margin:14px 0 7px;color:var(--ink);}
-label{display:block;font-size:13px;color:var(--muted);margin:8px 0 3px;}
-input,select,textarea{width:100%;min-width:0;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);box-sizing:border-box;}
-/* iOS Safari 对 type=date 有原生外观怪癖（盒子过高/文字不对齐/最小宽度挤压），统一重置 */
-input[type="date"]{-webkit-appearance:none;appearance:none;background:#fff;line-height:1.4;}
-.row{display:flex;gap:8px;flex-wrap:nowrap;}
-.row>*{flex:1 1 0;min-width:0;}
-.row.col{flex-direction:column;gap:10px;}
-.row.col>*{flex:none;width:100%;min-width:0;}
-button.act{background:var(--brand);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-size:14px;cursor:pointer;font-weight:600;}
-button.act2{background:var(--brand2);color:#fff;border:none;border-radius:9px;padding:9px 12px;font-size:13px;cursor:pointer;}
-button.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand);border-radius:9px;padding:8px 12px;font-size:13px;cursor:pointer;}
-.bd{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--brand);margin:2px 3px 0 0;}
-.big{font-size:30px;font-weight:800;color:var(--brand);}
-.muted{color:var(--muted);font-size:12.5px;}
-.bar{height:14px;background:#ececec;border-radius:8px;overflow:hidden;margin:4px 0 2px;}
-.bar>i{display:block;height:100%;background:linear-gradient(90deg,#3a7d6e,#5fb39e);}
-.bar.p>i{background:linear-gradient(90deg,#2f7a4a,#5bbf7e);}
-.bar.f>i{background:linear-gradient(90deg,#a8681f,#e0a85b);}
-.bar.c>i{background:linear-gradient(90deg,#7a3f8f,#b07fc7);}
-.metric{display:flex;justify-content:space-between;font-size:13px;margin-top:2px;}
-.item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;}
-.item .top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
-.item .nm{font-weight:600;font-size:14px;}
-.item.done{background:var(--soft);}
-.mini{width:54px;padding:6px;font-size:13px;text-align:center;}
-.chk{width:20px;height:20px;flex:none;}
-.chartbox{width:100%;overflow-x:auto;}
-canvas{max-width:100%;}
-.hist{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:13px;border-bottom:1px dashed var(--line);padding:8px 2px;}
-.hist b{color:var(--brand);}
+.avatar.active{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--brand);}
+.avatar.add{background:var(--soft);color:var(--brand);font-size:19px;font-weight:400;box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--line);}
+.avatar.add:hover{background:#e4ebf6;}
+/* 预设卡通头像：内联 SVG 铺满圆形，靠 .avatar 的 border-radius 裁切，无需额外圆角处理 */
+.avatar .avsvg{display:block;width:100%;height:100%;}
+.avatar.av-svg{background:var(--soft);}
+.pf-row .avatar{cursor:default;}
+/* 头像选择器：自适应列数，每格是圆形按钮，选中态用品牌色描边 */
+.avgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:8px;}
+.avpick{
+  position:relative;aspect-ratio:1/1;min-height:44px;padding:0;
+  border:0;border-radius:50%;background:var(--card);
+  cursor:pointer;overflow:hidden;font-family:inherit;
+  transition:box-shadow .15s,transform .12s;
+  box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--line);
+}
+.avpick:hover{transform:translateY(-1px);}
+.avpick.on{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--brand);}
+.avpick .avsvg{display:block;width:100%;height:100%;}
+.avpick .av-let{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-weight:700;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-l));}
+
+/* 导航：底部 tab bar（5 个一级页 + 更多）。
+   D 版把导航从顶部移到拇指可及的底部。带来两个必须一起处理的连带项：
+     ① 它是 position:fixed，所以 body 必须预留等高的 padding-bottom（见基础元素一节）；
+     ② 「返回顶部」悬浮按钮要上移，否则会被它压住（见 .totop）。
+   选中态只用品牌色（图标 + 文字），不加底色块/下划线——D 版的颜色只用来标状态。 */
+nav.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  display:flex;align-items:stretch;
+  background:rgba(255,255,255,.96);
+  -webkit-backdrop-filter:saturate(1.6) blur(12px);backdrop-filter:saturate(1.6) blur(12px);
+  border-top:1px solid var(--line);
+  padding:5px 2px calc(5px + env(safe-area-inset-bottom,0px));
+}
+nav.tabbar button{
+  flex:1 1 0;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  border:none;background:none;padding:6px 1px 4px;cursor:pointer;
+  color:var(--muted);font-size:10px;font-weight:600;font-family:inherit;
+  letter-spacing:.01em;white-space:nowrap;border-radius:var(--r-sm);
+  min-height:44px;transition:color .15s;
+}
+nav.tabbar button svg{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+nav.tabbar button.active{color:var(--brand);font-weight:800;}
+nav.tabbar button:active{color:var(--brand-d);}
+nav.tabbar button:focus-visible{outline:2px solid var(--brand-l);outline-offset:-2px;}
+
+/* 「更多」页：把 4 个低频入口做成整行可点的列表。
+   刻意不做成浮层/抽屉——浮层必然遮盖下方内容，而这里的每一条都是一次真实跳转，
+   用普通页面表达最直接，也和应用其余部分同一套观感。 */
+.navlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--card);}
+.navlist button{
+  display:flex;align-items:center;gap:10px;
+  border:none;border-bottom:1px solid var(--line);background:none;cursor:pointer;
+  padding:14px 13px;font-size:var(--f-md);font-family:inherit;font-weight:600;color:var(--ink);
+  text-align:left;min-height:52px;transition:background .14s;
+}
+.navlist button:last-child{border-bottom:none;}
+.navlist button:hover{background:var(--soft-2);}
+.navlist button em{font-style:normal;font-weight:500;color:var(--muted);font-size:var(--f-sm);margin-left:auto;text-align:right;}
+.navlist button .car{color:var(--faint);font-size:12px;flex:none;}
+
+/* 页面切换的「跳动」来自两处，这里一并消除：
+   ① 各页高度不同 → 有的页出现纵向滚动条、有的没有，视口宽度的占用随之变化，
+      内容会横向抖一下。scrollbar-gutter:stable 常驻预留滚动条槽位，差异消失。
+      （现代浏览器用该属性；不支持它的旧内核由下方 body 的 overflow-y:scroll 兜底。）
+   ② pageIn 动画一旦带 transform 就会创建新的包含块，让 sticky 元素在动画期间
+      「脱锚」再复位。改为只动 opacity（不过合成层、不建包含块），入场更稳。 */
+.page{display:none;padding:12px 11px 8px;max-width:760px;margin:0 auto;}
+.page.active{display:block;animation:pageIn .2s ease both;}
+@keyframes pageIn{from{opacity:.45;}to{opacity:1;}}
+
+/* ---------- 4) 卡片与列表 ---------- */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:13px;margin-bottom:11px;
+}
+.item{
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;margin:6px 0;
+  background:var(--card);transition:border-color .15s,background .15s;
+}
+.item:hover{border-color:var(--line-2);}
+.item .top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.item .nm{font-weight:700;font-size:var(--f-md);line-height:1.4;}
+.item.done{background:var(--brand-bg);border-color:var(--brand-ln);}
+.item.done .nm{color:var(--brand);}
+.item .hint{font-size:var(--f-xs);color:var(--muted);line-height:1.55;margin:4px 0;}
+.sec{border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px;background:var(--soft-2);margin-top:12px;}
+.sec-t{font-weight:700;font-size:var(--f-md);color:var(--ink);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.sec-t::before{content:"";width:3px;height:12px;border-radius:1px;background:var(--brand);flex:none;}
+
+/* 列表行一律用实线分隔：D 版里虚线是「手账感」的残留，和表格化的冷峻调性不符 */
+.hist{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:var(--f-md);border-bottom:1px solid var(--line);padding:9px 2px;}
+.hist:last-child{border-bottom:none;}
+.hist b{color:var(--brand);font-weight:700;font-family:var(--mono);}
 .hist .hbody{flex:1;min-width:0;line-height:1.5;}
 .hist .delete{flex:none;align-self:center;margin-left:2px;}
-.tag{font-size:10.5px;background:var(--brand2);color:#fff;padding:1px 7px;border-radius:999px;margin-left:5px;white-space:nowrap;}
-.warn{background:#fdecea;border:1px solid #f5b7b1;border-radius:10px;padding:11px 13px;color:#7b241c;font-size:13px;}
-.tip{background:#fff7ef;border:1px solid #f3d3b8;border-radius:10px;padding:11px 13px;margin:10px 0;font-size:13px;}
-.tabs{display:flex;gap:6px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none;}
-.tabs::-webkit-scrollbar{display:none;height:0;}
-.tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--muted);white-space:nowrap;}
-.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand);}
-ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
-.delete{color:var(--warn);font-size:12px;cursor:pointer;border:none;background:none;padding:4px 6px;white-space:nowrap;border-radius:5px;}
-.delete:hover{background:#fdecea;}
-/* 模板阶段标签 */
-.stage{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;font-weight:600;vertical-align:middle;white-space:nowrap;}
-.st-base{background:var(--soft);color:var(--brand);}
-.st-adv{background:#fbe9d7;color:#b5651d;}
-.st-lock{background:#fdecea;color:#c0392b;border:1px solid #f5b7b1;}
-.lastload{font-size:11px;color:#7a7a7a;margin:4px 0 2px;padding:3px 7px;background:#f6f3ee;border-radius:7px;}
-.lastload .up{color:var(--ok);font-weight:600;}
-.lastload .same{color:#b5651d;font-weight:600;}
-.lastload .down{color:var(--warn);font-weight:600;}
-.pr{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:6px 2px;border-bottom:1px dashed var(--line);}
+.pr{display:flex;justify-content:space-between;gap:10px;font-size:var(--f-sm);padding:6px 2px;border-bottom:1px solid var(--line);}
 .pr:last-child{border-bottom:none;}
 .pr .nm{font-weight:600;flex:0 0 auto;}
 .pr .muted{text-align:right;}
+.empty{color:var(--muted);text-align:center;padding:22px 16px;font-size:var(--f-md);}
+.muted{color:var(--muted);font-size:var(--f-sm);}
 .center{text-align:center;}
-.empty{color:var(--muted);text-align:center;padding:18px;font-size:13px;}
-.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-.thumbs img{width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:pointer;}
-.cmp img{width:48%;border-radius:10px;border:1px solid var(--line);}
-#ph_light{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99;align-items:center;justify-content:center;cursor:zoom-out;}
-#ph_light img{max-width:92%;max-height:88%;border-radius:10px;}
-.editem{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:5px 0;display:flex;align-items:center;gap:8px;font-size:13.5px;}
-.editem input[type=checkbox]{width:18px;height:18px;flex:none;}
+.bd{display:inline-block;font-size:var(--f-xs);padding:2px 7px;border-radius:var(--r-xs);background:var(--brand-bg);color:var(--brand);margin:4px 4px 0 0;font-weight:700;}
+.tag{font-size:var(--f-xs);background:var(--brand);color:#fff;padding:2px 7px;border-radius:var(--r-xs);margin-left:6px;white-space:nowrap;font-weight:700;}
+
+/* 提示条 */
+.tip{background:var(--amber-bg);border:1px solid var(--amber-ln);border-radius:var(--r-sm);padding:11px 12px;margin:10px 0;font-size:var(--f-md);line-height:1.6;}
+.warn{background:var(--warn-bg);border:1px solid #f2c9c4;border-radius:var(--r-sm);padding:11px 12px;color:#7b241c;font-size:var(--f-md);line-height:1.6;}
+.ok-note{background:var(--ok-bg);border:1px solid #bfdcc8;border-radius:var(--r-sm);padding:9px 12px;color:#1f5c34;font-size:var(--f-sm);margin-top:10px;}
+
+/* 缩略图与灯箱 */
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.thumbs img{width:66px;height:66px;object-fit:cover;border-radius:var(--r-sm);border:1px solid var(--line);cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.thumbs img:hover{transform:scale(1.05);box-shadow:var(--sh-2);}
+.cmp img{width:48%;border-radius:var(--r-md);border:1px solid var(--line);}
+.cmpimg{width:100%;border-radius:var(--r-md);border:1px solid var(--line);}
+.lightimg{max-width:92%;max-height:78%;border-radius:var(--r-md);}
+.btn-sm{font-size:var(--f-sm);padding:6px 12px;min-height:34px;}
+.c-brand2{color:var(--brand-2);font-weight:700;}
+.c-brand{color:var(--brand);font-weight:700;}
+.cmpcol{flex:1 1 0;min-width:0;}
+#ph_light{display:none;position:fixed;inset:0;background:rgba(16,14,10,.9);z-index:99;align-items:center;justify-content:center;cursor:zoom-out;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
+#ph_light img{max-width:92%;max-height:88%;border-radius:var(--r-md);box-shadow:var(--sh-3);}
+/* 灯的容器：让删除按钮与图片垂直排列 */
+#ph_light>div{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;}
+/* 编辑历史 / 编辑模板里的「完成」勾选框标签 */
+.chkline{margin:0;display:flex;align-items:center;gap:7px;font-size:var(--f-sm);font-weight:600;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.chkline.chk-sm{font-size:var(--f-sm);color:var(--ink);}
+
+.lastload{font-size:var(--f-xs);color:var(--ink-2);margin:6px 0 2px;padding:5px 9px;background:var(--soft-2);border-radius:var(--r-xs);border-left:2px solid var(--line-2);}
+.lastload .up{color:var(--ok);font-weight:700;}
+.lastload .same{color:var(--amber);font-weight:700;}
+.lastload .down{color:var(--warn);font-weight:700;}
+
+/* 阶段图标 chip：挂在「编辑此模板」按钮尾部，按钮本来就有 44px 触控高度，
+   所以 chip 不额外增加行高，也不产生第三行布局 */
+.chip{margin-left:6px;font-size:var(--f-sm);line-height:1;opacity:.9;}
+
+/* 图例：文字标签已换成图标，这里说明图标含义。
+   <i> 用等宽字体 + 固定宽度，让三个图标竖直对齐，不会因字形宽度差而错位。 */
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:7px;font-size:var(--f-xs);color:var(--faint);}
+.legend .lg{display:inline-flex;align-items:center;gap:4px;}
+.legend .lg i{font-style:normal;font-family:var(--mono);font-size:var(--f-sm);color:var(--muted);width:1em;text-align:center;}
+
+/* 阶段分段选择器：与应用导航同一套语言（无边框、透明底、下划线选中） */
+.seg{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:4px;}
+.seg button{
+  flex:1 1 0;border:none;background:none;padding:10px 6px 9px;font-size:var(--f-sm);
+  font-family:inherit;color:var(--muted);cursor:pointer;font-weight:600;letter-spacing:.02em;
+  border-bottom:2px solid transparent;transition:color .18s,border-color .18s;
+}
+.seg button:hover{color:var(--ink-2);}
+.seg button.on{color:var(--brand);font-weight:700;border-bottom-color:var(--brand);}
+
+/* 返回顶部：固定右下角、**压在底部 tab bar 之上**。
+   ① 用 opacity+visibility+translateY 做显隐，不用 display:none ——
+      后者无法过渡，且会打断 pointer-events，出现「按钮在但点不到」的中间态；
+   ② visibility:hidden 保证隐藏时不拦截点击（opacity:0 仍然可点，是常见坑）；
+   ③ 底部偏移必须加上 --tabbar 与安全区，否则会被底部导航压住点不到；
+      z-index 取得比 tab bar 低，两者万一重叠也让导航在上。 */
+.totop{
+  position:fixed;right:12px;bottom:calc(var(--tabbar) + 14px + env(safe-area-inset-bottom,0px));z-index:25;
+  width:40px;height:40px;border-radius:var(--r-md);border:1px solid var(--line-2);
+  background:var(--card);color:var(--brand);font-size:16px;line-height:1;font-weight:700;
+  font-family:inherit;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transform:translateY(8px);pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease,visibility .2s;
+}
+.totop.show{opacity:1;visibility:visible;transform:none;pointer-events:auto;}
+.totop:hover{border-color:var(--brand-l);color:var(--brand-d);}
+.totop:active{transform:scale(.94);}
+
+/* 训练参考：周期流程 / 动作标签 / 教程注释 */
+.wkflow{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:10px;}
+.wkc{width:27px;height:27px;border-radius:var(--r-xs);display:inline-flex;align-items:center;justify-content:center;font-size:var(--f-sm);font-weight:700;}
+.wkc.wa{background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-ln);}
+.wkc.wb{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-ln);}
+.wkar{color:var(--faint);font-size:var(--f-sm);}
+.pacts{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+.pact{font-size:var(--f-xs);background:var(--soft);color:var(--brand);border:1px solid var(--line);padding:3px 7px;border-radius:var(--r-xs);font-weight:600;}
+.tnote{font-size:var(--f-xs);color:#7a5210;background:var(--amber-bg);border-left:3px solid var(--amber);border-radius:0 var(--r-xs) var(--r-xs) 0;padding:6px 10px;margin-top:7px;line-height:1.6;}
+ul.l{margin:8px 0;padding-left:19px;font-size:var(--f-md);line-height:1.75;}
+ol.l{margin:8px 0;padding-left:21px;font-size:var(--f-md);line-height:1.78;}
+ul.l li,ol.l li{margin:6px 0;}
+ul.l li::marker{color:var(--brand-l);}
+ol.l li::marker{color:var(--brand);font-weight:700;}
+
+/* 档案 */
+.pf-list{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+.pf-row{display:flex;align-items:center;gap:12px;padding:11px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--soft-2);transition:all .15s;}
+.pf-row.active{border-color:var(--brand);background:var(--card);}
+.pf-meta{flex:1;min-width:0;}
+.pf-name{font-weight:700;font-size:var(--f-md);display:flex;align-items:center;gap:6px;}
+.pf-sub{font-size:var(--f-sm);color:var(--muted);line-height:1.5;}
+.pf-ops{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.cur-tag{background:var(--brand);color:#fff;font-size:var(--f-xs);padding:2px 7px;border-radius:var(--r-xs);font-weight:700;}
+
+/* ---------- 5) 表单与按钮 ---------- */
+.row{display:flex;gap:9px;flex-wrap:wrap;}
+.row>*{flex:1 1 0;min-width:0;}
+.row.col{flex-direction:column;gap:11px;}
+.row.col>*{flex:none;width:100%;min-width:0;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+button{font-family:inherit;}
+/* 按钮一律去掉渐变与投影：D 版靠「实心蓝 / 描边 / 静默」三档区分主次，
+   而不是靠立体感。主按钮与次按钮同色、只差尺寸，动作层级由位置决定。 */
+button.act{
+  background:var(--brand);color:#fff;border:none;border-radius:var(--r-sm);
+  padding:11px 15px;font-size:var(--f-lg);cursor:pointer;font-weight:700;min-height:var(--tap);
+  transition:background .15s,transform .1s;width:100%;
+}
+button.act:hover{background:var(--brand-d);}
+button.act:active{transform:translateY(1px);}
+button.act2{
+  background:var(--brand);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 13px;
+  font-size:var(--f-md);cursor:pointer;font-weight:700;min-height:40px;transition:background .15s,transform .1s;
+}
+button.act2:hover{background:var(--brand-d);}
+button.act2:active{transform:translateY(1px);}
+button.ghost{
+  background:var(--card);color:var(--brand);border:1px solid var(--brand-ln);border-radius:var(--r-sm);
+  padding:10px 13px;font-size:var(--f-md);cursor:pointer;font-weight:700;min-height:40px;
+  transition:background .15s,color .15s;
+}
+button.ghost:hover{background:var(--brand-bg);}
+button.ghost:active{background:var(--brand-bg);}
+button.wfull{width:100%;}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;}
+.btns>button{flex:1 1 0;min-width:0;}
+.mini-btn{background:var(--soft);color:var(--brand);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 12px;font-size:var(--f-sm);cursor:pointer;white-space:nowrap;font-weight:700;min-height:32px;transition:background .15s;}
+.mini-btn:hover{background:var(--brand-bg);}
+.mini-btn.del{background:var(--warn);color:#fff;border-color:var(--warn);}
+.delete{color:var(--warn);font-size:var(--f-sm);cursor:pointer;border:none;background:none;padding:6px 9px;white-space:nowrap;border-radius:var(--r-xs);font-weight:600;min-height:32px;transition:background .15s;}
+.delete:hover{background:var(--warn-bg);}
+.mini{width:58px;padding:8px 6px;font-size:var(--f-md);text-align:center;font-weight:600;}
+.chk{width:22px;height:22px;flex:none;accent-color:var(--brand);cursor:pointer;}
+.editem{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;margin:6px 0;display:flex;align-items:flex-start;gap:10px;font-size:var(--f-md);cursor:pointer;transition:background .15s,border-color .15s;}
+.editem:hover{background:var(--soft-2);border-color:var(--line-2);}
+.editem input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--brand);cursor:pointer;}
+
+/* Tab（饮食分类） */
+/* 饮食分类：胶囊改方角小块，与大圆角的「手账感」区分开 */
+.tabs{display:flex;gap:6px;overflow-x:auto;flex-wrap:nowrap;padding:2px 1px 8px;margin-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.tabs::-webkit-scrollbar{display:none;height:0;}
+.tabs button{
+  border:1px solid var(--line-2);background:var(--card);border-radius:var(--r-sm);padding:7px 13px;
+  font-size:var(--f-md);cursor:pointer;color:var(--muted);white-space:nowrap;font-weight:600;min-height:36px;transition:all .16s;
+}
+.tabs button:hover{border-color:var(--brand-l);color:var(--brand);}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand);}
+
+/* 图表 */
+.chartbox{width:100%;overflow-x:auto;margin:2px 0 6px;}
+canvas{max-width:100%;}
+
+/* 间距工具类：替代散落的内联 margin-top */
+.mt-6{margin-top:6px}
+.mt-8{margin-top:8px}
+.mt-10{margin-top:10px}
+.mb-10{margin-bottom:10px}
+.note-in{font-size:var(--f-sm);color:var(--muted);margin-top:6px;line-height:1.55;}
+.hint-t{font-size:var(--f-xs);color:var(--muted);line-height:1.55;margin:5px 0;}
+
+/* ---------- 6) 指标与进度 ---------- */
+.big{font-size:var(--f-2xl);font-weight:800;color:var(--brand);line-height:1.12;letter-spacing:-.02em;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+.bar{height:6px;background:var(--line);border-radius:2px;overflow:hidden;margin:5px 0 2px;}
+.bar>i{display:block;height:100%;border-radius:2px;background:var(--brand);transition:width .35s cubic-bezier(.4,0,.2,1);}
+/* 四个营养素不再各配一种颜色：进度条统一品牌色，只有「超标」才变红 */
+.bar.p>i,.bar.f>i,.bar.c>i{background:var(--brand);}
+.bar.over>i{background:var(--warn);}
+.metric{display:flex;justify-content:space-between;gap:10px;font-size:var(--f-md);margin-top:3px;}
+.metric b{font-weight:700;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+.topg{font-size:var(--f-md) !important;line-height:1.6;}
+
+/* 指标表：D 版不用卡片堆叠，改成「项目｜实际｜目标｜达成」四列表格 + 内联迷你条。
+   一屏能看到的信息量约为卡片网格的两倍，且数字等宽右对齐后可以竖着扫读。
+   颜色只用于状态（超标红 / 接近目标琥珀），营养素之间不做颜色区分。 */
+/* 列宽只在一处声明：表头行与数据行共用同一个自定义属性，
+   窄屏降级时也只需要改这一个值，不会出现表头与数据错列。 */
+.dtable{--dcols:1fr 62px 54px 46px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);overflow:hidden;}
+.dhd,.drow{display:grid;grid-template-columns:var(--dcols);gap:6px;align-items:center;padding:9px 11px;border-bottom:1px solid var(--line);}
+.dhd{padding:6px 11px;background:var(--soft-2);font-size:var(--f-xs);font-weight:800;letter-spacing:.07em;color:var(--muted);}
+.dhd span,.drow .ac,.drow .tg,.drow .pct{text-align:right;}
+.dhd span:first-child{text-align:left;}
+.drow:last-child{border-bottom:none;}
+.drow .nm{font-size:var(--f-md);font-weight:600;color:var(--ink);}
+/* 单位跟在名称后：四行的单位不同（kcal / g），不能提到表头里 */
+.drow .nm .u{font-size:var(--f-xs);color:var(--faint);font-weight:500;margin-left:4px;}
+.drow .ac,.drow .tg,.drow .pct{font-family:var(--mono);font-size:var(--f-sm);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.drow .ac{font-weight:700;color:var(--ink);}
+.drow .tg{color:var(--muted);}
+.drow .pct{font-weight:800;color:var(--ink-2);}
+.drow.over .ac,.drow.over .pct{color:var(--warn);}
+.drow.near .pct{color:var(--amber);}
+.dspark{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:5px;}
+.dspark>i{display:block;height:100%;border-radius:2px;background:var(--brand);transition:width .35s cubic-bezier(.4,0,.2,1);}
+.drow.over .dspark>i{background:var(--warn);}
+.drow.near .dspark>i{background:var(--amber);}
+
+/* 今日页指标摘要 */
+.tstats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px;}
+.tstat{background:var(--soft-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 5px;text-align:center;}
+.tstat .v{font-size:16px;font-weight:800;color:var(--brand);line-height:1.25;letter-spacing:-.02em;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+.tstat .k{font-size:var(--f-xs);color:var(--muted);font-weight:600;}
+.tstat .u{font-size:var(--f-xs);font-weight:600;color:var(--muted);}
+
+/* 一行式快速记录条：去掉渐变底，回归「一块带边框的操作区」 */
+.quickrec{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 12px;margin-bottom:11px;}
+.quickrec .qt{font-size:var(--f-md);font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.quickrec .qt::before{content:"";width:3px;height:12px;border-radius:1px;background:var(--brand);flex:none;}
+.quickrec .qrow{display:flex;gap:8px;align-items:stretch;}
+.quickrec .qrow input{flex:1 1 auto;min-width:0;}
+.quickrec .qrow button{flex:0 0 auto;min-width:76px;}
+.qdone{font-size:var(--f-sm);color:var(--ok);font-weight:600;margin-top:8px;display:flex;align-items:center;gap:5px;}
+.qdone::before{content:"✓";font-weight:800;}
+
+/* ---------- 7) 各页专用 ---------- */
+/* 历史折叠控制 */
+.more-line{margin-top:9px;text-align:center;}
+.more-line button{
+  background:var(--card);color:var(--brand);border:1px solid var(--line-2);border-radius:var(--r-sm);
+  padding:8px 15px;font-size:var(--f-md);cursor:pointer;font-weight:700;font-family:inherit;
+  min-height:36px;transition:all .15s;
+}
+.more-line button:hover{background:var(--brand-bg);border-color:var(--brand-ln);}
+/* 概览统计行 */
+.ovw{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:var(--f-md);color:var(--ink-2);line-height:1.7;}
+.ovw b{color:var(--brand);font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;}
+/* 体重页坐标 */
+.wgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+
+/* ---------- 8) 响应式 ---------- */
+@media (max-width:420px){
+  /* 窄屏：收窄指标表的数字列（只改一处自定义属性，表头与数据行自动同步） */
+  .dtable{--dcols:1fr 54px 46px 42px;}
+  .dhd,.drow{padding:8px 10px;gap:5px;}
+  .tstats{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .tstat{padding:7px 4px;}
+  .tstat .v{font-size:15px;}
+  .page{padding:11px 10px 8px;}
+  .card{padding:12px;}
+  .grid2{grid-template-columns:1fr 1fr;}
+  .wgrid{grid-template-columns:1fr 1fr;}
+  .pf-avatars{max-width:50vw;}
+}
+@media (max-width:330px){
+  /* 极窄屏：指标表退化成三列（名称｜摄入｜达成），「目标」列让位。
+     数值本身已经带达成百分比，去掉目标列不丢信息。 */
+  .dtable{--dcols:1fr 58px 44px;}
+  .drow .tg,.dhd span:nth-child(3){display:none;}
+  .wgrid{grid-template-columns:1fr;}
+}
+@media (min-width:560px){
+  nav.tabbar button{font-size:11px;}
+  nav.tabbar button svg{width:21px;height:21px;}
+  .tstats{gap:10px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
+}
 </style><link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").then(function(reg){reg.addEventListener("updatefound",function(){var nw=reg.installing;if(!nw)return;nw.addEventListener("statechange",function(){if(nw.state==="installed"&&navigator.serviceWorker.controller){sessionStorage.setItem("sw_update_pending","1");nw.postMessage("SKIP_WAITING");}});});}).catch(function(e){console.log("SW 注册失败(可忽略):",e);});navigator.serviceWorker.addEventListener("controllerchange",function(){if(sessionStorage.getItem("sw_update_pending")){sessionStorage.removeItem("sw_update_pending");window.location.reload();}});});}</script>
@@ -120,31 +487,32 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
     </div>
   </div>
 </header>
-<nav id="nav">
-  <button data-p="today" class="active">今日</button>
-  <button data-p="weight">体重</button>
-  <button data-p="train">训练</button>
-  <button data-p="diet">饮食</button>
-  <button data-p="progress">进度</button>
-  <button data-p="ref">参考</button>
-  <button data-p="data">数据</button>
-  <button data-p="profiles">档案</button>
-  <button data-p="trash">回收站</button>
-  <i class="nav-slider" id="navSlider"></i>
-</nav>
+<!-- 主导航已移到页面底部（见文件末尾的 <nav class="tabbar">）。
+     顶部只保留应用栏，把纵向空间全部让给内容。 -->
+
+<!-- 返回顶部：固定悬浮，只在页面滚过一屏后出现。
+     底部偏移已避开 tab bar（见 .totop），放在 .page 之外以免受切页动画影响。 -->
+<button id="toTop" class="totop" onclick="scrollToTop()" aria-label="返回顶部" title="返回顶部">↑</button>
 
 <!-- 今日 -->
 <div class="page active" id="today">
+  <div class="quickrec">
+    <div class="qt">快速记录今日体重</div>
+    <div class="qrow">
+      <input type="number" step="0.1" inputmode="decimal" id="tq_w" placeholder="如 59.4" aria-label="今日体重（kg）" onkeydown="if(event.key==='Enter')quickSaveWeight()">
+      <button class="act2" id="tq_btn" onclick="quickSaveWeight()">保存</button>
+    </div>
+    <div id="tq_note"></div>
+  </div>
   <div class="card center">
     <div class="muted">距离目标还差（kg）</div>
     <div class="big" id="t_remain">—</div>
     <div class="muted" id="t_progress"></div>
-    <div style="margin-top:10px"><button class="act2" onclick="quickWeight()">记录今日体重</button></div>
   </div>
   <div class="card">
     <h2>今日饮食进度</h2>
     <div id="t_diet"></div>
-    <div style="margin-top:8px" class="row">
+    <div class="btns">
       <button class="act2" onclick="showPage('diet')">去记录饮食</button>
       <button class="act2" onclick="showPage('train')">去训练打卡</button>
     </div>
@@ -168,7 +536,7 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
       <div><label>臀围(cm)</label><input type="number" step="0.1" id="w_hip" placeholder="可选"></div>
     </div>
     <label>备注</label><textarea id="w_note" rows="2" placeholder="例：生理期第3天 / 睡眠差"></textarea>
-    <div style="margin-top:10px"><button class="act" onclick="saveWeight()">保存</button></div>
+    <div class="mt-10"><button class="act" onclick="saveWeight()">保存</button></div>
     <div id="w_tip"></div>
   </div>
   <div class="card">
@@ -192,23 +560,23 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
   <div class="card">
     <h2>训练打卡</h2>
     <label>选择今日模板（按大类区分）</label>
-    <div class="row" style="align-items:flex-end;gap:8px">
-      <div style="flex:1;min-width:0"><select id="tpl_sel" onchange="loadTemplate()"></select></div>
-      <span id="tpl_stage"></span>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button class="ghost" onclick="showEdit()">✎ 编辑此模板 / 加自定义动作</button>
+    <select id="tpl_sel" onchange="loadTemplate()"></select>
+    <!-- 文字标签已全部换成图标，这里给一行图例；否则用户不知道 ○◐● 各代表什么 -->
+    <div class="legend" id="stage_legend"></div>
+    <!-- 阶段不再单独占一行：并入「编辑此模板」按钮组，点按钮即展开修改 -->
+    <div class="row mt-8">
+      <button class="ghost" onclick="showEdit()">✎ 编辑此模板 / 加自定义动作<span class="chip" id="tpl_stage_chip"></span></button>
     </div>
     <div id="tpl_items"></div>
-    <div style="margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--soft)">
-      <div style="font-weight:700;font-size:13.5px;color:var(--brand);margin-bottom:4px">负荷进度 · 本模板各动作最近记录</div>
+    <div class="sec">
+      <div class="sec-t">负荷进度 · 本模板各动作最近记录</div>
       <div id="tpl_progress"></div>
     </div>
-    <div class="row" style="margin-top:8px">
+    <div class="row mt-8">
       <div><label>体感 RPE(1-10)</label><input type="number" id="t_rpe" min="1" max="10" placeholder="6"></div>
       <div><label>备注</label><input id="t_note" placeholder="如：状态不错"></div>
     </div>
-    <div style="margin-top:10px"><button class="act" onclick="saveTraining()">保存今日训练</button></div>
+    <div class="mt-10"><button class="act" onclick="saveTraining()">保存今日训练</button></div>
   </div>
   <div class="card" id="tpl_edit" style="display:none">
     <h2>编辑模板：<span id="ed_name"></span></h2>
@@ -217,12 +585,20 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
     <div class="tip">
       新增自定义动作：
       <input id="ca_name" placeholder="动作名，如：弹力带侧平举">
-      <input id="ca_how" placeholder="要领，如：肩外展至肩高，不耸肩" style="margin-top:8px">
-      <div class="row" style="margin-top:8px">
+      <input class="mt-8" id="ca_how" placeholder="要领，如：肩外展至肩高，不耸肩">
+      <div class="row mt-8">
         <button class="act2" onclick="addCustomAction()">+ 加入模板</button>
       </div>
     </div>
-    <div class="row" style="margin-top:8px">
+    <!-- 阶段可改：原先是写死的数据字段，无法调整。放在编辑面板里，不占日常主流程空间。 -->
+    <label>模板阶段（显示在下拉框选项前，也用于进度判定）</label>
+    <input type="hidden" id="ed_stage">
+    <div class="seg" id="ed_stage_seg">
+      <button type="button" data-st="基础" onclick="pickStage('基础')">基础</button>
+      <button type="button" data-st="进阶" onclick="pickStage('进阶')">进阶</button>
+      <button type="button" data-st="待解锁" onclick="pickStage('待解锁')">待解锁</button>
+    </div>
+    <div class="row mt-8">
       <button class="act" onclick="saveTemplate()">保存模板</button>
       <button class="ghost" onclick="hideEdit()">取消</button>
     </div>
@@ -235,8 +611,8 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
     <h2>编辑训练记录：<span id="he_title"></span></h2>
     <input type="hidden" id="he_idx">
     <div id="he_items"></div>
-    <div class="row" style="margin-top:8px"><select id="he_add" onchange="addHistItem()"></select></div>
-    <div class="row" style="margin-top:8px">
+    <div class="row mt-8"><select id="he_add" onchange="addHistItem()"></select></div>
+    <div class="row mt-8">
       <button class="act" onclick="saveHistEdit()">保存修改</button>
       <button class="ghost" onclick="document.getElementById('hist_edit').style.display='none'">取消</button>
     </div>
@@ -252,18 +628,18 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
   <div class="card">
     <div class="tabs" id="d_tabs"></div>
     <div id="d_list"></div>
-    <button class="ghost" style="margin-top:8px;width:100%" onclick="toggleManual()">+ 手动添加食物/餐</button>
-    <div id="manual_form" class="tip" style="display:none;margin-top:8px">
+    <button class="ghost mt-8" onclick="toggleManual()">+ 手动添加食物/餐</button>
+    <div class="tip mt-8" id="manual_form" style="display:none">
       <input id="m_name" placeholder="食物/餐名称，如：煮鸡蛋">
-      <div class="row" style="margin-top:8px">
+      <div class="row mt-8">
         <input id="m_kcal" type="number" placeholder="热量 kcal">
         <input id="m_p" type="number" placeholder="蛋白 g">
       </div>
-      <div class="row" style="margin-top:8px">
+      <div class="row mt-8">
         <input id="m_f" type="number" placeholder="脂肪 g">
         <input id="m_c" type="number" placeholder="碳水 g">
       </div>
-      <div class="row" style="margin-top:8px">
+      <div class="row mt-8">
         <button class="act2" onclick="manualMeal()">加入</button>
         <button class="ghost" onclick="toggleManual()">取消</button>
       </div>
@@ -297,6 +673,26 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
   </div>
 </div>
 
+<!-- 更多：低频入口的落地页。
+     刻意做成普通页面而不是浮层/抽屉——这里的每一条都是一次真实跳转，
+     用页面表达最直接，也不会像浮层那样遮盖下方内容。 -->
+<div class="page" id="more">
+  <div class="card">
+    <h2>更多功能</h2>
+    <div class="navlist">
+      <button onclick="showPage('ref')">参考手册<em>路线图 · 动作要领</em><span class="car">›</span></button>
+      <button onclick="showPage('data')">数据同步<em>导出 / 导入 JSON</em><span class="car">›</span></button>
+      <button onclick="showPage('profiles')">档案管理<em>多人档案 · 目标设定</em><span class="car">›</span></button>
+      <button onclick="showPage('trash')">回收站<em>已删除记录，可恢复</em><span class="car">›</span></button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>本机数据</h2>
+    <div class="ovw" id="more_stats"></div>
+    <div class="hint-t">数据全部存在本机浏览器。换设备请用「数据同步」导出后导入。</div>
+  </div>
+</div>
+
 <!-- 参考 -->
 <div class="page" id="ref">
   <div class="card">
@@ -316,6 +712,34 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
       <li>连续 3 周不掉秤→查隐形热量并加步行；乏力/掉发/状态差→热量+100~150。</li>
     </ul>
   </div>
+  <div class="card">
+    <h2>训练频次安排（A/B 套餐）</h2>
+    <p class="muted">A 偏拉+肩臂，B 偏推+腿。按你每周能练的天数选一种，循环执行即可；练就比不练强，一周 1-2 次也有效。</p>
+    <div id="r_weeks"></div>
+  </div>
+  <div class="card">
+    <h2>六大动作模式</h2>
+    <div id="r_patterns"></div>
+  </div>
+  <div class="card">
+    <h2>参考重量与目标</h2>
+    <div id="r_loads"></div>
+  </div>
+  <div class="card">
+    <h2>渐进超负荷记录法</h2>
+    <div id="r_progressive"></div>
+  </div>
+  <div class="card">
+    <h2>薄肌心法</h2>
+    <ul class="l">
+      <li><b>薄肌是结果，不是练法。</b>取其上得其中——照着「厚肌」的思路练复合动作，配上体脂控制，出来的才是薄肌。目标定太低反而容易放弃。</li>
+      <li><b>体脂是薄肌的前提。</b>腹肌要「干而不柴」，体脂需控制在 14% 以下；线条靠饮食缺口，不靠狂练腹。</li>
+      <li><b>渐进超负荷是唯一增长逻辑。</b>每次同样动作、同样重量争取多做一个；能轻松完成 15-20 次再加重量。每天用一样的重量，效果会不好。</li>
+      <li><b>练腿别跳过。</b>蹲和髋铰链是人类的两个古老动作模式，对激素水平帮助大；练后侧链（臀腿后侧）能拉住大腿前侧，跑跳时护膝。</li>
+      <li><b>肩袖小肌肉一定要练。</b>脸拉/面拉这类动作不为了好看，是为了推多了别把肩膀推伤。</li>
+      <li><b>手臂和腹肌不要信「复合动作就够」。</b>练得越多线条越好，穿上衣服能露出来的往往就是袖口。</li>
+    </ul>
+  </div>
 </div>
 
 <!-- 数据 -->
@@ -330,7 +754,7 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
       <option value="1.55">中活动 1.55（每周中强度3-5次）</option>
       <option value="1.725">高活动 1.725（每周高强度6-7次）</option>
     </select>
-    <div id="tdee_box" style="margin-top:8px"></div>
+    <div id="tdee_box" class="mt-8"></div>
   </div>
   <div class="card">
     <h2>数据同步（导出 / 导入）</h2>
@@ -340,8 +764,8 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
       <button class="act2" onclick="document.getElementById('imp').click()">导入数据</button>
     </div>
     <input type="file" id="imp" accept="application/json" style="display:none" onchange="importData(this)">
-    <div style="margin-top:10px"><button class="ghost" onclick="clearData()">清空当前档案数据</button></div>
-    <p class="muted" id="d_msg" style="margin-top:10px"></p>
+    <div class="mt-10"><button class="ghost" onclick="clearData()">清空当前档案数据</button></div>
+    <p class="muted mt-10" id="d_msg"></p>
   </div>
   <div class="card">
     <h2>当前档案</h2>
@@ -359,7 +783,7 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
   <div class="card">
     <h2>新建档案</h2>
     <input id="np_name" placeholder="档案名，如：我自己 / 老公 / 学员小李">
-    <div style="margin-top:8px"><button class="act" onclick="newProfile()">+ 新建档案</button></div>
+    <div class="mt-8"><button class="act" onclick="newProfile()">+ 新建档案</button></div>
   </div>
   <div class="card">
     <h2>当前档案信息（<span id="pf_cur_name"></span>）</h2>
@@ -376,7 +800,7 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
     <label>活动系数</label><select id="pf_act"><option value="1.2">久坐 1.2</option><option value="1.375">轻活动 1.375</option><option value="1.55">中活动 1.55</option><option value="1.725">高活动 1.725</option></select>
     <h3>每日摄入目标</h3>
     <p class="muted">也可点下方按钮，按性别／年龄／身高／当前体重／活动系数自动算出（热量缺口约 450kcal）。</p>
-    <button class="act2" onclick="autoCalcTargets()" style="margin-bottom:10px">⚙ 自动计算摄入目标</button>
+    <button class="act2 mb-10" onclick="autoCalcTargets()">⚙ 自动计算摄入目标</button>
     <div class="row">
       <div><label>热量(kcal)</label><input id="pf_cal" type="number"></div>
       <div><label>蛋白(g)</label><input id="pf_pro" type="number"></div>
@@ -385,7 +809,12 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
       <div><label>脂肪(g)</label><input id="pf_fat" type="number"></div>
       <div><label>碳水(g)</label><input id="pf_carb" type="number"></div>
     </div>
-    <div style="margin-top:10px"><button class="act" onclick="saveProfileInfo()">保存信息</button></div>
+    <div class="mt-10"><button class="act" onclick="saveProfileInfo()">保存信息</button></div>
+  </div>
+  <div class="card">
+    <h2>头像（<span id="pf_av_name"></span>）</h2>
+    <p class="muted">挑一个卡通头像，点一下即生效。选「字母」则回到原来的首字母样式。</p>
+    <div id="av_pick" class="avgrid"></div>
   </div>
   <div class="card">
     <h2>删除当前档案</h2>
@@ -403,20 +832,92 @@ ul.l{margin:6px 0;padding-left:18px;font-size:13.5px;}
       <div><label>数据类型</label><select id="bd_type"><option value="weight">体重/围度</option><option value="train">训练</option><option value="photo">照片</option><option value="meal">饮食</option></select></div>
       <div><label>截止日期（含当天）</label><input type="date" id="bd_date"></div>
     </div>
-    <div style="margin-top:8px"><button class="act" onclick="batchDelete()">删除该日期前的全部记录</button></div>
+    <div class="mt-8"><button class="act" onclick="batchDelete()">删除该日期前的全部记录</button></div>
   </div>
   <div class="card">
     <h2>回收站（误删可还原）</h2>
     <div id="trash_list"></div>
-    <div style="margin-top:10px"><button class="ghost" onclick="emptyTrash()">清空回收站</button></div>
+    <div class="mt-10"><button class="ghost" onclick="emptyTrash()">清空回收站</button></div>
   </div>
 </div>
-<div id="ph_light" onclick="if(event.target===this)this.style.display='none'"><div style="text-align:center"><img id="ph_light_img" src="" alt="" style="max-width:92%;max-height:78%;border-radius:10px"><div style="margin-top:10px"><button class="act2" onclick="delPhoto()">删除这张照片</button></div></div></div>
+  <div id="ph_light" onclick="if(event.target===this)this.style.display='none'"><div><img class="lightimg" id="ph_light_img" src="" alt=""><div class="mt-10"><button class="act2" onclick="delPhoto()">删除这张照片</button></div></div></div>
+
+<!-- 主导航：底部 tab bar。5 个一级页 + 「更多」。
+     position:fixed 贴底 → body 必须预留等高空白（见 CSS 的 body 与 --tabbar）。
+     放在所有 .page 之后，保证脚本执行时按钮已存在。 -->
+<nav id="nav" class="tabbar">
+  <button data-p="today" class="active">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.5 9.6V20h13V9.6"/></svg>
+    <span>今日</span>
+  </button>
+  <button data-p="weight">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h4l2.6-6 2.8 3.6L16 7h4"/></svg>
+    <span>体重</span>
+  </button>
+  <button data-p="train">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.2v5.6M6.4 6.6v10.8M17.6 6.6v10.8M21 9.2v5.6M6.4 12h11.2"/></svg>
+    <span>训练</span>
+  </button>
+  <button data-p="diet">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.2v6.4a2.4 2.4 0 0 0 4.8 0V3.2M9.4 12v8.8M17 3.2c-1.6 0-2.4 1.6-2.4 3.6s.8 3.6 2.4 3.6v10.4"/></svg>
+    <span>饮食</span>
+  </button>
+  <button data-p="progress">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9M9.5 20V4M15 20v-7M20.5 20V8"/></svg>
+    <span>进度</span>
+  </button>
+  <button data-p="more">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg>
+    <span>更多</span>
+  </button>
+</nav>
 
 <script>
 const DB_KEY="fitlog_v1";
+/* ---------- 薄肌教程（BV1rheP6TECb）提炼的参考数据 ---------- */
+const THIN_WEEKS=[
+ {n:"一周两练",s:"只练 A、B",d:"A → B → 休息，循环。适合刚开始、时间少。",p:["A","B"]},
+ {n:"一周三练",s:"A/B 交替",d:"第一周 A→B→A，第二周 B→A→B，如此循环。",p:["A","B","A"]},
+ {n:"一周四练（豪华套餐）",s:"A/B 各两次",d:"A→B→A→B，训练量最大、进步最快。",p:["A","B","A","B"]}
+];
+const THIN_PATTERNS=[
+ {n:"1 · 拉（拉拽）",d:"一辈子只留一个动作就选引体向上。做不了很正常——先用弹力带辅助或跳上慢下的离心退阶，能做十几个再卸掉辅助。0 到 1 最难，过了 1 后面都简单。能做接近 10 个，背部三角线条就出来了；体重轻的人再用负重腰带挂片继续加负荷。",a:["pullup","band_pullup","neg_pullup","weighted_pullup","cable_row"]},
+ {n:"2 · 推（水平 / 向上）",d:"水平推练胸、向上推练肩，两者折中就是上斜卧推——被称为「上肢的深蹲」，对上胸与肩膀刺激都很大，很多人下胸厚上胸空，练这块补短板。居家用上斜凳 25° 做哑铃卧推，行程长、最低点拉伸感好。",a:["incline_bench","bench","incline_db_db","bb_ohp","pushup"]},
+ {n:"3 · 肩（门面肌肉）",d:"侧平举几乎没有功能性，但会让肩膀显宽、比例变好。别学我一开始用 20kg 站着借力甩，上斜方全练起来了。改坐姿、上身固定，借力少很多，重量比站姿低 20-30%，效果反而更好。从 2.5 / 5kg 起步，能 10kg 标准坐姿做 10 多个，宽肩形态就成了。做完立刻接一组脸拉（超级组、不休息），练肩袖防受伤。",a:["seated_lateral","lateral","reardelt","facepull","band_facepull","sabd"]},
+ {n:"4 · 蹲（蹲下站起）",d:"人类最古老的动作模式之一。重点不是练多大的腿，而是练腿对全身激素水平帮助特别大。杠铃背蹲不好学，泽奇深蹲（手肘出杠）重心与身体高度重合、更好上手，但肘关节压力大、务必热身充分。居家或不想上大重量就用高脚杯深蹲。",a:["bb_squat","zercher","squat","legpress","step"]},
+ {n:"5 · 髋铰链",d:"把重物从地上拉起来，也是最古老的动作模式，但很多人不练。罗马尼亚硬拉贴着小腿、背从侧面看是直的、下到小腿中段再起。练大腿后侧、臀、下背。不练后侧的话，跑跳时大腿前侧发力过多、后侧拉不住制动，膝盖很容易受伤。",a:["rdl","deadlift","hipthrust","bridge","legcurl"]},
+ {n:"6 · 手臂与腹（袖口线条）",d:"别再信「只做复合动作就够了」，练得越多线条越好——穿上衣服胸肩背都看不见，能露出来的只有袖口。二头弯举坐姿做、借力少；三头做颈后臂屈伸和凳上臂屈伸（身体贴大腿、肘提起来顶住，几乎无法借力）。腹肌必练：同样体脂下练过的腹肌块更大、更清晰。只选一个就选悬垂举腿，从静止悬挂→屈腿抬高→直腿抬高进阶。",a:["curl","oh_ext","tri_dip","tri_push","legraise","situp","pf"]}
+];
+const THIN_LOADS=[
+ {n:"引体向上",d:"自重起。能做 10 个以上才考虑挂片增重；20kg 负重引体身体会明显变宽变厚"},
+ {n:"上斜卧推",d:"一根杆一边挂一片，总重约 60kg 做组，配好体脂率就已经算大成"},
+ {n:"坐姿侧平举",d:"从 2.5 / 5kg 起，能 10kg 标准做 10+ 个即达成宽肩形态；再上重量就开始「变大」了"},
+ {n:"二头 / 三头",d:"能用 10kg 做组就已经很棒了。手臂小肌群上不了大重量，别硬冲"},
+ {n:"悬垂举腿",d:"直腿连续做 15 次 + 体脂率 14% 以下 = 干而不柴的腹肌线条"},
+ {n:"深蹲 / 硬拉",d:"以动作标准优先，重量让位于姿势；泽奇深蹲注意肘关节，务必热身"}
+];
+/* 动作 id → 补充要领/注意（教程特有内容） */
+const THIN_NOTES={
+ pullup:"能做接近十个，背部三角线条就出来了",
+ band_pullup:"弹力带套紧再踩，防回弹打到脸",
+ neg_pullup:"当年没弹力带就这么练：跳上去、慢慢下",
+ weighted_pullup:"体重轻的人自重没难度，靠加片继续刺激",
+ incline_bench:"注意别砸到自己：优先选带安全杠的架子，没安全杠就别练到力竭",
+ incline_db_db:"行程长，最低点有明显的拉伸感",
+ seated_lateral:"上身固定住，比站姿借力更少",
+ facepull:"超级组：紧跟侧平举，中间不休息",
+ band_facepull:"不练肩袖小肌肉，推久了会吃肩膀的伤",
+ bb_squat:"杠上斜方会勒出印子，正常；务必热身充分",
+ zercher:"先不熟，只记录；肘关节压力大，务必热身",
+ rdl:"贴着小腿、背挺直、下到小腿中段；练后侧链保护膝盖",
+ curl:"坐姿做，借力少、对二头刺激大",
+ oh_ext:"小心哑铃砸到脑袋或地面",
+ tri_dip:"身体贴住大腿、肘提起来顶住，几乎无法借力",
+ legraise:"进阶顺序：静止悬挂 → 屈腿抬高 → 直腿抬高",
+ legcurl:"大腿后侧练起来，跑跳时才能拉住前侧制动"
+};
 const RECIPES={"B": [{"id": "B1", "name": "双蛋·全麦·豆浆经典盘", "items": [["鸡蛋", 100], ["全麦面包", 35], ["无糖豆浆", 200], ["小番茄", 100], ["核桃", 8]], "how": "鸡蛋水煮或水波蛋（不加油）；全麦面包直接吃或干烙；豆浆选无糖现磨。最省事的基础款，蛋白稳、饱腹久。", "tag": "经典·高蛋白", "kcal": 369, "p": 24.6, "f": 18.1, "c": 27.1}, {"id": "B2", "name": "燕麦牛奶双蛋白碗", "items": [["燕麦片", 35], ["牛奶", 200], ["鸡蛋", 50], ["希腊酸奶", 100], ["蓝莓", 50]], "how": "燕麦用热牛奶泡3分钟，铺上酸奶蓝莓，配1个水煮蛋。钙+蛋白+膳食纤维一次到位。", "tag": "饱腹·补钙", "kcal": 399, "p": 28.6, "f": 13.7, "c": 40.6}, {"id": "B3", "name": "中式杂粮粥·豆腐小菜", "items": [["大米", 25], ["小米", 15], ["鸡蛋", 50], ["北豆腐", 80], ["菠菜", 100], ["香油", 3], ["无糖豆浆", 200]], "how": "杂粮粥前一晚预约煮；北豆腐切块焯水，拌菠菜加几滴香油。适合想吃热乎中式早餐时。", "tag": "中式·暖胃", "kcal": 408, "p": 28.2, "f": 15.4, "c": 40.2}, {"id": "B4", "name": "鸡蛋蔬菜三明治", "items": [["全麦面包", 60], ["鸡蛋", 100], ["生菜", 50], ["番茄", 50], ["牛奶", 150]], "how": "鸡蛋煎成薄蛋饼（用不粘锅少油或水炒），夹全麦面包+生菜番茄。可前一晚备好冷藏，早上直接拿。", "tag": "便携·可带", "kcal": 391, "p": 24.3, "f": 15.8, "c": 37.3}, {"id": "B5", "name": "蒸红薯·蛋奶组合", "items": [["红薯", 120], ["鸡蛋", 100], ["牛奶", 200], ["核桃", 8]], "how": "红薯蒸熟（可一次蒸几个冷藏）；配水煮蛋和热牛奶。便秘友好，红薯膳食纤维高。", "tag": "通便·高纤", "kcal": 422, "p": 22.4, "f": 20.1, "c": 38.7}, {"id": "B6", "name": "菠菜胡萝卜鸡蛋饼", "items": [["鸡蛋", 100], ["蛋清", 30], ["全麦面包", 35], ["菠菜", 80], ["胡萝卜", 30], ["橄榄油", 3], ["无糖豆浆", 200]], "how": "菠菜焯水切碎，与蛋液、胡萝卜碎混匀，不粘锅刷薄油摊成饼。孩子也能一起吃。", "tag": "蔬菜量足", "kcal": 371, "p": 28.3, "f": 16.5, "c": 27.8}, {"id": "B7", "name": "咸豆腐脑·虾皮紫菜", "items": [["南豆腐", 200], ["鸡蛋", 50], ["虾皮", 3], ["紫菜", 2], ["香油", 2], ["全麦面包", 35], ["小番茄", 100]], "how": "豆腐蒸热，加虾皮紫菜、几滴香油做成咸豆腐脑。低脂高蛋白，补钙还好消化。", "tag": "低脂·补钙", "kcal": 385, "p": 24.7, "f": 14.6, "c": 29.6}, {"id": "B8", "name": "隔夜燕麦杯（懒人）", "items": [["燕麦片", 35], ["希腊酸奶", 150], ["牛奶", 100], ["蓝莓", 50], ["核桃", 8], ["鸡蛋", 50]], "how": "前一晚把燕麦+酸奶+牛奶装杯冷藏，早上取出加蓝莓核桃，配1个水煮蛋。全程不用开火。", "tag": "零厨艺·快手", "kcal": 427, "p": 31.9, "f": 15.4, "c": 40.5}], "L": [{"id": "L1", "name": "香煎鸡胸·杂粮饭·西兰花", "items": [["鸡胸肉", 120], ["杂粮饭", 150], ["西兰花", 150], ["橄榄油", 5]], "how": "鸡胸横切成薄片，用少许盐黑胡椒腌10分钟，中火每面煎2-3分钟别过老；西兰花焯水拌橄榄油。", "tag": "增肌主力", "kcal": 431, "p": 33.9, "f": 13.1, "c": 45.5}, {"id": "L2", "name": "虾仁芦笋·糙米饭", "items": [["虾仁", 120], ["糙米饭", 150], ["芦笋", 100], ["胡萝卜", 50], ["橄榄油", 5]], "how": "虾仁用料酒姜片去腥，快炒1-2分钟至变色即可（久炒会柴）；芦笋胡萝卜同炒。低脂高蛋白。", "tag": "低脂·高蛋白", "kcal": 373, "p": 34.9, "f": 6.9, "c": 44.0}, {"id": "L3", "name": "番茄牛里脊·米饭·菠菜", "items": [["牛里脊", 100], ["米饭", 150], ["番茄", 150], ["菠菜", 100], ["橄榄油", 5]], "how": "牛肉逆纹切薄片，先炒番茄出汁再下牛肉快炒；菠菜最后烫熟。补铁，适合补铁、气血偏弱时。", "tag": "补铁", "kcal": 383, "p": 28.1, "f": 8.3, "c": 50.6}, {"id": "L4", "name": "香煎三文鱼·杂粮饭", "items": [["三文鱼", 100], ["杂粮饭", 150], ["西兰花", 150], ["橄榄油", 5]], "how": "三文鱼厨房纸吸干水分，带皮面先煎3分钟再翻面2分钟，撒海盐黑胡椒。富含Omega-3，抗炎。", "tag": "抗炎·优质脂肪", "kcal": 410, "p": 27.9, "f": 14.9, "c": 42.5}, {"id": "L5", "name": "香菇烧豆腐·米饭·小白菜", "items": [["北豆腐", 150], ["米饭", 150], ["香菇", 100], ["娃娃菜", 150], ["橄榄油", 5]], "how": "豆腐切块用少量油煎至两面金黄，加香菇和生抽焖3分钟，最后下娃娃菜。素食日首选。", "tag": "素食·高钙", "kcal": 417, "p": 26.6, "f": 13.1, "c": 51.1}, {"id": "L6", "name": "鸡腿肉·蒸红薯·西兰花", "items": [["鸡腿去皮", 120], ["红薯", 150], ["西兰花", 150], ["橄榄油", 5]], "how": "鸡腿去皮后脂肪大减，煎或烤至熟透；红薯替代米饭做主食，饱腹感强、升糖慢。", "tag": "换主食", "kcal": 423, "p": 30.1, "f": 15.2, "c": 41.0}, {"id": "L7", "name": "巴沙鱼豆腐煲·杂粮饭", "items": [["巴沙鱼", 120], ["南豆腐", 100], ["杂粮饭", 150], ["娃娃菜", 150], ["橄榄油", 5]], "how": "巴沙鱼无刺，与嫩豆腐、娃娃菜同煮成煲，加姜丝白胡椒调味。刺少好嚼，带娃吃饭也省心。", "tag": "少刺·好消化", "kcal": 438, "p": 30.9, "f": 13.3, "c": 44.2}, {"id": "L8", "name": "猪里脊炒时蔬·米饭", "items": [["猪里脊", 100], ["米饭", 150], ["青椒", 100], ["豆芽", 100], ["橄榄油", 5]], "how": "里脊切丝上浆（少许淀粉蛋清）快炒更嫩；青椒豆芽最后下锅保持脆感。含B族维生素。", "tag": "快手炒菜", "kcal": 414, "p": 27.6, "f": 13.7, "c": 47.9}, {"id": "L9", "name": "鸡蛋豆腐盖饭·西兰花", "items": [["鸡蛋", 100], ["北豆腐", 100], ["米饭", 120], ["西兰花", 150], ["橄榄油", 3]], "how": "豆腐煎香后淋入蛋液半凝固即关火，盖在饭上。10分钟搞定，蛋白质密度很高。", "tag": "10分钟", "kcal": 462, "p": 34.8, "f": 17.9, "c": 41.8}, {"id": "L10", "name": "鸡胸玉米沙拉碗", "items": [["鸡胸肉", 120], ["玉米", 80], ["生菜", 150], ["小番茄", 100], ["杂粮饭", 80], ["橄榄油", 5]], "how": "所有食材切好拌匀，油用橄榄油+柠檬汁/黑醋调汁。夏天没胃口时的清爽选择。", "tag": "清爽·夏款", "kcal": 435, "p": 31.8, "f": 13.2, "c": 48.4}], "D": [{"id": "D1", "name": "清蒸鲈鱼·豆腐·菠菜", "items": [["鲈鱼", 120], ["南豆腐", 100], ["菠菜", 150], ["杂粮饭", 80], ["橄榄油", 5]], "how": "鲈鱼两面划刀铺姜丝，水开后蒸8分钟，倒掉腥水淋热油生抽。刺少蛋白高，晚餐首选。", "tag": "清淡·高蛋白", "kcal": 392, "p": 34.8, "f": 13.6, "c": 29.4}, {"id": "D2", "name": "虾仁蒸蛋·红薯·西兰花", "items": [["虾仁", 100], ["鸡蛋", 50], ["西兰花", 150], ["红薯", 100], ["橄榄油", 3]], "how": "蛋液加1.5倍温水过筛，盖保鲜膜蒸8分钟，放虾仁再蒸2分钟。嫩滑好消化。", "tag": "好消化", "kcal": 351, "p": 38.4, "f": 8.8, "c": 31.1}, {"id": "D3", "name": "番茄豆腐汤·鸡胸·青菜", "items": [["鸡胸肉", 100], ["北豆腐", 100], ["番茄", 150], ["娃娃菜", 150], ["米饭", 80]], "how": "番茄炒出汁加水煮开，下豆腐和青菜，鸡胸切片最后烫熟。一碗热汤暖身又低卡。", "tag": "汤水·暖身", "kcal": 379, "p": 37.3, "f": 10.5, "c": 35.5}, {"id": "D4", "name": "牛里脊·芦笋香菇·杂粮饭", "items": [["牛里脊", 100], ["芦笋", 100], ["香菇", 100], ["杂粮饭", 80], ["橄榄油", 5]], "how": "牛肉快炒变色盛出，再炒芦笋香菇，最后回锅拌匀。控制油量是这道菜的关键。", "tag": "低油炒菜", "kcal": 291, "p": 26.2, "f": 8.3, "c": 30.5}, {"id": "D5", "name": "鸡丝菌菇·娃娃菜·红薯", "items": [["鸡胸肉", 100], ["金针菇", 100], ["娃娃菜", 150], ["红薯", 100], ["橄榄油", 3]], "how": "鸡胸水煮后撕成丝，菌菇娃娃菜清炒或煮汤，拌入鸡丝。少油版也很香。", "tag": "少油", "kcal": 316, "p": 25.6, "f": 8.7, "c": 36.3}, {"id": "D6", "name": "三文鱼·芦笋·生菜沙拉", "items": [["三文鱼", 100], ["芦笋", 150], ["生菜", 100], ["杂粮饭", 80], ["橄榄油", 5]], "how": "三文鱼煎熟，芦笋焯水，配生菜。优质脂肪+纤维，晚上吃也不负担。", "tag": "优质脂肪", "kcal": 325, "p": 23.0, "f": 13.9, "c": 28.5}, {"id": "D7", "name": "烧豆腐·西兰花·胡萝卜", "items": [["北豆腐", 150], ["西兰花", 150], ["胡萝卜", 50], ["米饭", 80], ["橄榄油", 5]], "how": "豆腐煎至金黄，加西兰花胡萝卜和少量生抽蚝油焖2分钟。全素但蛋白不低。", "tag": "全素", "kcal": 358, "p": 27.0, "f": 13.4, "c": 33.8}, {"id": "D8", "name": "番茄鸡蛋荞麦面", "items": [["荞麦面", 40], ["鸡蛋", 100], ["番茄", 150], ["娃娃菜", 100], ["橄榄油", 3]], "how": "荞麦面煮至8分熟过凉水更筋道；番茄炒蛋做成浇头。注意面量控制在干重40g。", "tag": "面食解馋", "kcal": 357, "p": 21.4, "f": 13.2, "c": 40.4}, {"id": "D9", "name": "白灼虾·嫩豆腐·秋葵", "items": [["虾仁", 120], ["南豆腐", 150], ["秋葵", 100], ["米饭", 80], ["橄榄油", 3]], "how": "虾仁水开后煮90秒捞出蘸生抽；秋葵焯水切段。几乎无油烟的一餐。", "tag": "无油烟", "kcal": 406, "p": 42.2, "f": 8.8, "c": 33.2}, {"id": "D10", "name": "鸡胸大碗沙拉", "items": [["鸡胸肉", 120], ["生菜", 150], ["小番茄", 100], ["黄瓜", 100], ["玉米", 80], ["橄榄油", 5]], "how": "所有生食洗净切好，鸡胸煎熟切片铺上，油醋汁现拌现吃。晚餐偏轻量时选它。", "tag": "轻断食友好", "kcal": 359, "p": 30.2, "f": 12.8, "c": 32.1}], "S": [{"id": "S1", "name": "希腊酸奶+核桃", "items": [["希腊酸奶", 150], ["核桃", 8]], "kcal": 140, "p": 16.6, "f": 5.3, "c": 6.9}, {"id": "S2", "name": "苹果+杏仁", "items": [["苹果", 150], ["杏仁", 10]], "kcal": 137, "p": 2.7, "f": 5.4, "c": 22.4}, {"id": "S3", "name": "水煮蛋+小番茄", "items": [["鸡蛋", 50], ["小番茄", 100]], "kcal": 97, "p": 7.7, "f": 4.6, "c": 6.4}, {"id": "S4", "name": "无糖豆浆+全麦面包", "items": [["无糖豆浆", 300], ["全麦面包", 35]], "kcal": 179, "p": 12.2, "f": 6.0, "c": 19.0}, {"id": "S5", "name": "蛋白奶昔（运动后）", "items": [["牛奶", 200], ["蛋白粉", 20]], "kcal": 184, "p": 22.0, "f": 7.4, "c": 8.4}, {"id": "S6", "name": "猕猴桃+希腊酸奶", "items": [["猕猴桃", 100], ["希腊酸奶", 100]], "kcal": 120, "p": 11.1, "f": 1.0, "c": 18.1}, {"id": "S7", "name": "蒸红薯（垫肚子）", "items": [["红薯", 100]], "kcal": 99, "p": 1.6, "f": 0.2, "c": 23.0}, {"id": "S8", "name": "蓝莓酸奶杯", "items": [["蓝莓", 80], ["希腊酸奶", 150]], "kcal": 134, "p": 16.0, "f": 0.8, "c": 17.0}], "T": [{"id": "T1", "name": "番茄豆腐蛋花汤", "items": [["番茄", 150], ["南豆腐", 100], ["鸡蛋", 50]], "how": "番茄炒软加水煮开，下豆腐，最后淋蛋液关火搅散。酸甜开胃，几乎零负担。", "kcal": 189, "p": 14.2, "f": 8.1, "c": 10.8}, {"id": "T2", "name": "冬瓜虾仁汤", "items": [["冬瓜", 200], ["虾仁", 80]], "how": "冬瓜煮软后下虾仁，变色即关火，加盐白胡椒。利水消肿，适合下午腿胀时。", "kcal": 103, "p": 20.0, "f": 0.6, "c": 5.4}, {"id": "T3", "name": "菌菇鸡丝汤", "items": [["鸡胸肉", 100], ["香菇", 100], ["金针菇", 80]], "how": "鸡胸整块冷水下锅煮10分钟撕丝，汤里下菌菇。一锅出，可当汤也可当菜。", "kcal": 185, "p": 23.5, "f": 5.6, "c": 12.5}, {"id": "T4", "name": "紫菜虾皮蛋花汤", "items": [["紫菜", 2], ["虾皮", 3], ["鸡蛋", 50]], "how": "碗里放紫菜虾皮，冲入沸水，淋蛋液。1分钟搞定，补钙补碘。", "kcal": 82, "p": 8.1, "f": 4.5, "c": 2.4}, {"id": "T5", "name": "海带豆腐汤", "items": [["海带", 150], ["北豆腐", 100]], "how": "海带切丝与豆腐同煮5分钟，加少许生抽。含碘和钙，清淡有饱腹感。", "kcal": 118, "p": 14.0, "f": 5.0, "c": 4.7}, {"id": "T6", "name": "娃娃菜豆腐汤", "items": [["娃娃菜", 200], ["北豆腐", 100]], "how": "娃娃菜煮软后加豆腐块再煮2分钟，只放盐和几滴香油。最简晚餐搭档。", "kcal": 132, "p": 15.2, "f": 5.0, "c": 7.9}], "Q": [{"id": "Q1", "name": "微波蛋羹+即食鸡胸", "items": [["鸡蛋", 100], ["即食鸡胸", 100], ["黄瓜", 100], ["全麦面包", 35]], "how": "蛋液加温水微波中火2分钟；即食鸡胸开袋即食，配黄瓜和面包。全程不开火。", "tag": "不开火", "kcal": 366, "p": 39.2, "f": 12.2, "c": 23.1}, {"id": "Q2", "name": "冷冻虾仁炒蛋盖饭", "items": [["虾仁", 100], ["鸡蛋", 100], ["米饭", 120], ["西兰花", 150], ["橄榄油", 3]], "how": "常备冷冻虾仁和冷冻西兰花，解冻后与蛋同炒，盖在加热的米饭上。10分钟出锅。", "tag": "10分钟", "kcal": 463, "p": 46.6, "f": 13.4, "c": 40.5}, {"id": "Q3", "name": "味噌豆腐汤+饭", "items": [["北豆腐", 150], ["米饭", 150], ["紫菜", 2], ["虾皮", 3]], "how": "味噌一勺化开，加豆腐紫菜虾皮煮开，配一碗饭。孩子闹腾时的救急餐。", "tag": "救急", "kcal": 331, "p": 23.7, "f": 7.7, "c": 42.1}, {"id": "Q4", "name": "隔夜燕麦杯（提前备）", "items": [["燕麦片", 35], ["希腊酸奶", 150], ["蓝莓", 50], ["核桃", 8]], "how": "睡前5分钟装杯冷藏，早上拿起来就走。适合娃早起闹人的早晨。", "tag": "提前备", "kcal": 301, "p": 22.2, "f": 7.8, "c": 35.7}, {"id": "Q5", "name": "全麦鸡肉卷", "items": [["全麦面包", 70], ["即食鸡胸", 100], ["生菜", 50], ["番茄", 50]], "how": "即食鸡胸撕条，全麦面包夹生菜番茄卷起。可单手吃，边带娃边解决。", "tag": "单手吃", "kcal": 310, "p": 29.4, "f": 4.6, "c": 35.8}, {"id": "Q6", "name": "番茄鸡蛋面（15分钟）", "items": [["荞麦面", 40], ["鸡蛋", 100], ["番茄", 150], ["娃娃菜", 100], ["橄榄油", 3]], "how": "番茄炒软煮汤下面，最后卧个蛋。一锅端，洗碗也省。", "tag": "一锅端", "kcal": 357, "p": 21.4, "f": 13.2, "c": 40.4}], "foods": {"鸡胸肉": [133, 19.4, 5.0, 2.5], "鸡蛋": [144, 13.3, 8.8, 2.8], "蛋清": [60, 11.6, 0.1, 3.1], "北豆腐": [98, 12.2, 4.8, 1.5], "南豆腐": [87, 6.2, 3.4, 3.4], "虾仁": [99, 24.0, 0.3, 0.2], "三文鱼": [139, 17.2, 7.8, 0.0], "鲈鱼": [105, 18.6, 3.4, 0.0], "巴沙鱼": [90, 15.0, 3.0, 0.0], "牛里脊": [106, 20.2, 2.3, 1.2], "猪里脊": [155, 20.2, 7.9, 0.7], "鸡腿去皮": [146, 18.0, 7.5, 0.0], "即食鸡胸": [120, 22.0, 2.0, 2.0], "牛奶": [54, 3.0, 3.2, 3.4], "无糖豆浆": [31, 3.0, 1.6, 1.2], "希腊酸奶": [59, 10.3, 0.4, 3.6], "蛋白粉": [380, 80.0, 5.0, 8.0], "虾皮": [153, 30.7, 2.2, 2.5], "米饭": [116, 2.6, 0.3, 25.9], "杂粮饭": [115, 3.0, 0.8, 24.0], "糙米饭": [112, 2.8, 0.9, 23.0], "燕麦片": [377, 15.0, 6.7, 61.6], "全麦面包": [246, 9.0, 3.3, 44.0], "红薯": [99, 1.6, 0.2, 23.0], "玉米": [112, 4.0, 1.2, 22.8], "大米": [346, 7.4, 0.8, 77.9], "小米": [361, 9.0, 3.1, 75.1], "荞麦面": [348, 13.0, 2.5, 71.0], "山药": [57, 1.9, 0.2, 12.4], "土豆": [87, 2.0, 0.1, 20.0], "西兰花": [36, 4.1, 0.6, 4.3], "菠菜": [28, 2.6, 0.3, 4.5], "生菜": [16, 1.3, 0.3, 2.0], "番茄": [20, 0.9, 0.2, 4.0], "小番茄": [25, 1.0, 0.2, 5.0], "黄瓜": [16, 0.8, 0.2, 2.9], "胡萝卜": [39, 1.0, 0.2, 8.8], "娃娃菜": [17, 1.5, 0.1, 3.2], "香菇": [26, 2.2, 0.3, 5.2], "芦笋": [22, 1.4, 0.1, 4.9], "秋葵": [37, 2.0, 0.1, 7.1], "青椒": [22, 1.4, 0.3, 5.4], "洋葱": [40, 1.1, 0.2, 9.0], "紫甘蓝": [31, 1.2, 0.2, 6.9], "金针菇": [32, 2.4, 0.4, 6.0], "豆芽": [18, 2.1, 0.1, 2.9], "冬瓜": [12, 0.4, 0.2, 2.6], "海带": [13, 1.2, 0.1, 2.1], "紫菜": [250, 26.7, 1.1, 44.1], "黑木耳": [265, 12.1, 1.5, 65.6], "苹果": [53, 0.4, 0.2, 13.5], "蓝莓": [57, 0.7, 0.3, 14.5], "香蕉": [93, 1.4, 0.2, 22.0], "柚子": [42, 0.8, 0.2, 9.5], "猕猴桃": [61, 0.8, 0.6, 14.5], "草莓": [32, 1.0, 0.2, 7.1], "核桃": [646, 14.9, 58.8, 19.1], "杏仁": [578, 21.0, 51.0, 22.0], "橄榄油": [899, 0.0, 99.9, 0.0], "香油": [898, 0.0, 99.7, 0.0], "花生": [589, 24.8, 44.3, 21.7], "芝麻酱": [630, 19.2, 52.7, 22.7]}, "weeks": {"A 周（鸡胸·虾·豆腐轮换）": [["B1", "L1", "D2", "S1"], ["B2", "L2", "D1", "S3"], ["B3", "L3", "D4", "S6"], ["B8", "L4", "D5", "S1"], ["B5", "L9", "D7", "S6"], ["B4", "L10", "D9", "S8"], ["B6", "L1", "D3", "S4"]], "B 周（鱼·牛·豆腐轮换）": [["B2", "L4", "D1", "S8"], ["B1", "L3", "D5", "S1"], ["B7", "L2", "D6", "S1"], ["B8", "L7", "D2", "S6"], ["B3", "L5", "D4", "S1"], ["B4", "L8", "D9", "S5"], ["B5", "L6", "D10", "S8"]], "C 周（快手·少油烟周）": [["B8", "Q2", "D7", "S1"], ["B4", "L9", "Q6", "S4"], ["B1", "Q1", "D9", "S3"], ["B2", "L10", "Q3", "S8"], ["B7", "L5", "D3", "S6"], ["B3", "Q5", "D2", "S2"], ["B6", "L1", "D7", "S1"]]}, "phases": [{"n": "阶段一 · 适应与基础", "w": "第 1–4 周", "d": "建立动作模式与运动习惯，低强度起步，把训练与饮食节奏跑通。重点学动作、不追求强度。"}, {"n": "阶段二 · 力量建立", "w": "第 5–8 周", "d": "用自体重或弹力带/小器械建立全身力量与稳定，打下后续进阶基础。"}, {"n": "阶段三 · 渐进超负荷", "w": "第 9–12 周", "d": "引入哑铃/壶铃或器械，逐步加重，刺激肌肉与力量持续增长。"}, {"n": "阶段四 · 巩固与精雕", "w": "第 13 周起", "d": "维持负荷，盯围度与体成分变化，达标后转维持热量防反弹。"}], "actions": [{"id": "pf", "name": "核心收紧（腹横肌）", "how": "呼气时肚脐轻收向脊柱（束腰感），不憋气，可配合呼吸节奏", "phase": "all"}, {"id": "catcow", "name": "猫牛式 Cat-Cow", "how": "四足位，吸气塌腰抬头、呼气弓背低头，配合呼吸活动脊柱", "phase": "all"}, {"id": "bridge", "name": "臀桥 Glute Bridge", "how": "仰卧夹臀顶髋至肩-髋-膝一线，不塌腰", "phase": "lower,full"}, {"id": "deadbug", "name": "死虫 Dead Bug", "how": "仰卧举腿屈膝，对侧手脚缓伸，腰贴地不塌", "phase": "all"}, {"id": "birddog", "name": "鸟狗式 Bird Dog", "how": "四足位对侧手脚伸出，骨盆稳不晃", "phase": "upper,full"}, {"id": "squat", "name": "徒手/高脚杯深蹲", "how": "臀后坐如坐椅，膝朝脚尖，起身夹臀", "phase": "lower,full"}, {"id": "side", "name": "侧卧抬腿", "how": "上方腿伸直慢抬，下方腰不塌", "phase": "lower,full"}, {"id": "row", "name": "弹力带划船", "how": "肘向后夹背，肩胛后缩，沉肩", "phase": "upper,full"}, {"id": "wallpu", "name": "靠墙俯卧撑", "how": "面对墙斜倾推墙，核心收紧不塌腰", "phase": "upper,full"}, {"id": "hipthrust", "name": "臀推 Hip Thrust", "how": "上背靠凳，顶髋夹臀成线", "phase": "lower,full"}, {"id": "rdl", "name": "罗马尼亚硬拉 RDL", "how": "微屈膝髋后移，背挺直，臀腿后侧发力", "phase": "lower,full"}, {"id": "ohp", "name": "哑铃推举 OHP", "how": "推至头顶，核心收紧不塌腰", "phase": "upper,full"}, {"id": "sabd", "name": "弹力带肩外展", "how": "站姿微屈髋，弹力带固定脚下，双臂体侧慢抬至肩高，不耸肩不塌腰", "phase": "upper,full"}, {"id": "step", "name": "踏步/台阶 Step-up", "how": "一脚踩稳凳或台阶，另一腿跟上不跳，控制下落，膝朝脚尖", "phase": "lower,full"}, {"id": "walk", "name": "快走/低冲击有氧", "how": "心率微升、能正常说话，20-40分钟", "phase": "all"}, {"id": "bench", "name": "杠铃卧推 Bench Press", "how": "杠铃慢放至胸，推起时夹胸收肩胛，核心收紧不塌腰", "phase": "gym,push"}, {"id": "incline_db", "name": "上斜哑铃卧推", "how": "凳调30-45°，哑铃推至胸上方，不耸肩不弹震", "phase": "gym,push"}, {"id": "pecdeck", "name": "器械夹胸 / 龙门架夹胸", "how": "手肘微屈，发力夹向胸前，顶峰停顿1秒", "phase": "gym,push"}, {"id": "tri_push", "name": "绳索三头下压", "how": "大臂贴身，小臂下压至伸直，不甩肩", "phase": "gym,push"}, {"id": "dip_assist", "name": "助力双杠臂屈伸", "how": "踏板上机，身体微前倾练胸、直立练三头，肘不超伸", "phase": "gym,push"}, {"id": "db_ohp", "name": "哑铃肩上推举", "how": "哑铃推至头顶，核心收不塌腰，不耸肩", "phase": "gym,push"}, {"id": "lateral", "name": "哑铃侧平举", "how": "微屈肘体侧抬至肩高，不耸肩不借力甩", "phase": "gym,push"}, {"id": "lat", "name": "高位下拉 Lat Pulldown", "how": "握距略宽于肩，拉至锁骨，沉肩不耸，背阔主导", "phase": "gym,pull"}, {"id": "cable_row", "name": "坐姿绳索划船", "how": "挺胸收腹，拉至腹肌，肩胛后缩，不圆肩", "phase": "gym,pull"}, {"id": "bb_row", "name": "杠铃划船", "how": "髋铰链微前倾，拉杠至腹，背挺直不圆背", "phase": "gym,pull"}, {"id": "curl", "name": "哑铃/杠铃弯举", "how": "大臂贴身固定，弯举至肩前，慢落不甩", "phase": "gym,pull"}, {"id": "facepull", "name": "面拉 Face Pull", "how": "绳索对脸拉至额前，外旋肩外展，改善圆肩", "phase": "gym,pull"}, {"id": "pullup_assist", "name": "助力引体向上", "how": "踏板上机，拉至下巴过杠，慢落控速", "phase": "gym,pull"}, {"id": "reardelt", "name": "反向飞鸟 / 反向蝴蝶机", "how": "俯身或面机，后束主导外展，不甩重量", "phase": "gym,pull"}, {"id": "bb_squat", "name": "杠铃深蹲 Back Squat", "how": "杠落肩胛，髋膝同开，蹲至大腿平行，核心全程收紧", "phase": "gym,leg"}, {"id": "legpress", "name": "腿举 Leg Press", "how": "脚踩踏板略宽，膝朝脚尖，不塌腰不锁死", "phase": "gym,leg"}, {"id": "legcurl", "name": "俯卧腿弯举", "how": "勾脚至最大，慢放，腘绳主导", "phase": "gym,leg"}, {"id": "calf", "name": "站姿提踵 Calf Raise", "how": "踮脚至顶停顿1秒，慢落拉伸", "phase": "gym,leg"}], "templates": {"基础激活日": ["pf", "catcow", "bridge", "deadbug", "walk"], "下肢日": ["bridge", "squat", "side", "hipthrust", "step", "walk"], "上肢日": ["birddog", "row", "wallpu", "sabd", "pf", "walk"], "全身日": ["squat", "row", "bridge", "birddog", "pf", "walk"], "有氧恢复日": ["walk", "catcow", "pf"], "胸·三头（器械/哑铃）": ["bench", "incline_db", "pecdeck", "tri_push"], "背·二头（器械/杠铃）": ["lat", "cable_row", "bb_row", "curl", "facepull"], "腿·臀（杠铃/器械）": ["bb_squat", "legpress", "rdl", "legcurl", "calf"], "肩·臂（哑铃/器械）": ["db_ohp", "lateral", "reardelt", "curl", "facepull"], "全身复合（器械）": ["legpress", "bench", "lat", "lateral", "walk"], "上肢推力（杠铃·进阶）": ["bench", "db_ohp", "dip_assist", "tri_push"], "上肢拉力（进阶）": ["pullup_assist", "cable_row", "curl", "facepull"], "放松恢复日": ["catcow", "pf", "deadbug", "bridge", "walk"], "灵活性·泡沫轴放松": ["catcow", "bridge", "deadbug", "sabd", "walk"], "低强度有氧恢复": ["walk", "catcow", "pf"]}, "templateMeta": {"基础激活日": {"cat": "居家训练", "stage": "基础"}, "下肢日": {"cat": "居家训练", "stage": "基础"}, "上肢日": {"cat": "居家训练", "stage": "基础"}, "全身日": {"cat": "居家训练", "stage": "基础"}, "有氧恢复日": {"cat": "居家训练", "stage": "基础"}, "胸·三头（器械/哑铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "背·二头（器械/杠铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "腿·臀（杠铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "肩·臂（哑铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "全身复合（器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "上肢推力（杠铃·进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "上肢拉力（进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "放松恢复日": {"cat": "体能恢复", "stage": "基础"}, "灵活性·泡沫轴放松": {"cat": "体能恢复", "stage": "基础"}, "低强度有氧恢复": {"cat": "体能恢复", "stage": "基础"}}, "templateGroups": {"居家训练": {"基础激活日": {"stage": "基础", "acts": ["pf", "catcow", "bridge", "deadbug", "walk"]}, "下肢日": {"stage": "基础", "acts": ["bridge", "squat", "side", "hipthrust", "step", "walk"]}, "上肢日": {"stage": "基础", "acts": ["birddog", "row", "wallpu", "sabd", "pf", "walk"]}, "全身日": {"stage": "基础", "acts": ["squat", "row", "bridge", "birddog", "pf", "walk"]}, "有氧恢复日": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}, "健身房力量训练": {"胸·三头（器械/哑铃）": {"stage": "进阶", "acts": ["bench", "incline_db", "pecdeck", "tri_push"]}, "背·二头（器械/杠铃）": {"stage": "进阶", "acts": ["lat", "cable_row", "bb_row", "curl", "facepull"]}, "腿·臀（杠铃/器械）": {"stage": "进阶", "acts": ["bb_squat", "legpress", "rdl", "legcurl", "calf"]}, "肩·臂（哑铃/器械）": {"stage": "进阶", "acts": ["db_ohp", "lateral", "reardelt", "curl", "facepull"]}, "全身复合（器械）": {"stage": "进阶", "acts": ["legpress", "bench", "lat", "lateral", "walk"]}, "上肢推力（杠铃·进阶）": {"stage": "待解锁", "acts": ["bench", "db_ohp", "dip_assist", "tri_push"]}, "上肢拉力（进阶）": {"stage": "待解锁", "acts": ["pullup_assist", "cable_row", "curl", "facepull"]}}, "体能恢复": {"放松恢复日": {"stage": "基础", "acts": ["catcow", "pf", "deadbug", "bridge", "walk"]}, "灵活性·泡沫轴放松": {"stage": "基础", "acts": ["catcow", "bridge", "deadbug", "sabd", "walk"]}, "低强度有氧恢复": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}}};
-const PLAN={"phases": [{"n": "阶段一 · 适应与基础", "w": "第 1–4 周", "d": "建立动作模式与运动习惯，低强度起步，把训练与饮食节奏跑通。重点学动作、不追求强度。"}, {"n": "阶段二 · 力量建立", "w": "第 5–8 周", "d": "用自体重或弹力带/小器械建立全身力量与稳定，打下后续进阶基础。"}, {"n": "阶段三 · 渐进超负荷", "w": "第 9–12 周", "d": "引入哑铃/壶铃或器械，逐步加重，刺激肌肉与力量持续增长。"}, {"n": "阶段四 · 巩固与精雕", "w": "第 13 周起", "d": "维持负荷，盯围度与体成分变化，达标后转维持热量防反弹。"}], "actions": [{"id": "pf", "name": "核心收紧（腹横肌）", "how": "呼气时肚脐轻收向脊柱（束腰感），不憋气，可配合呼吸节奏", "phase": "all"}, {"id": "catcow", "name": "猫牛式 Cat-Cow", "how": "四足位，吸气塌腰抬头、呼气弓背低头，配合呼吸活动脊柱", "phase": "all"}, {"id": "bridge", "name": "臀桥 Glute Bridge", "how": "仰卧夹臀顶髋至肩-髋-膝一线，不塌腰", "phase": "lower,full"}, {"id": "deadbug", "name": "死虫 Dead Bug", "how": "仰卧举腿屈膝，对侧手脚缓伸，腰贴地不塌", "phase": "all"}, {"id": "birddog", "name": "鸟狗式 Bird Dog", "how": "四足位对侧手脚伸出，骨盆稳不晃", "phase": "upper,full"}, {"id": "squat", "name": "徒手/高脚杯深蹲", "how": "臀后坐如坐椅，膝朝脚尖，起身夹臀", "phase": "lower,full"}, {"id": "side", "name": "侧卧抬腿", "how": "上方腿伸直慢抬，下方腰不塌", "phase": "lower,full"}, {"id": "row", "name": "弹力带划船", "how": "肘向后夹背，肩胛后缩，沉肩", "phase": "upper,full"}, {"id": "wallpu", "name": "靠墙俯卧撑", "how": "面对墙斜倾推墙，核心收紧不塌腰", "phase": "upper,full"}, {"id": "hipthrust", "name": "臀推 Hip Thrust", "how": "上背靠凳，顶髋夹臀成线", "phase": "lower,full"}, {"id": "rdl", "name": "罗马尼亚硬拉 RDL", "how": "微屈膝髋后移，背挺直，臀腿后侧发力", "phase": "lower,full"}, {"id": "ohp", "name": "哑铃推举 OHP", "how": "推至头顶，核心收紧不塌腰", "phase": "upper,full"}, {"id": "sabd", "name": "弹力带肩外展", "how": "站姿微屈髋，弹力带固定脚下，双臂体侧慢抬至肩高，不耸肩不塌腰", "phase": "upper,full"}, {"id": "step", "name": "踏步/台阶 Step-up", "how": "一脚踩稳凳或台阶，另一腿跟上不跳，控制下落，膝朝脚尖", "phase": "lower,full"}, {"id": "walk", "name": "快走/低冲击有氧", "how": "心率微升、能正常说话，20-40分钟", "phase": "all"}, {"id": "bench", "name": "杠铃卧推 Bench Press", "how": "杠铃慢放至胸，推起时夹胸收肩胛，核心收紧不塌腰", "phase": "gym,push"}, {"id": "incline_db", "name": "上斜哑铃卧推", "how": "凳调30-45°，哑铃推至胸上方，不耸肩不弹震", "phase": "gym,push"}, {"id": "pecdeck", "name": "器械夹胸 / 龙门架夹胸", "how": "手肘微屈，发力夹向胸前，顶峰停顿1秒", "phase": "gym,push"}, {"id": "tri_push", "name": "绳索三头下压", "how": "大臂贴身，小臂下压至伸直，不甩肩", "phase": "gym,push"}, {"id": "dip_assist", "name": "助力双杠臂屈伸", "how": "踏板上机，身体微前倾练胸、直立练三头，肘不超伸", "phase": "gym,push"}, {"id": "db_ohp", "name": "哑铃肩上推举", "how": "哑铃推至头顶，核心收不塌腰，不耸肩", "phase": "gym,push"}, {"id": "lateral", "name": "哑铃侧平举", "how": "微屈肘体侧抬至肩高，不耸肩不借力甩", "phase": "gym,push"}, {"id": "lat", "name": "高位下拉 Lat Pulldown", "how": "握距略宽于肩，拉至锁骨，沉肩不耸，背阔主导", "phase": "gym,pull"}, {"id": "cable_row", "name": "坐姿绳索划船", "how": "挺胸收腹，拉至腹肌，肩胛后缩，不圆肩", "phase": "gym,pull"}, {"id": "bb_row", "name": "杠铃划船", "how": "髋铰链微前倾，拉杠至腹，背挺直不圆背", "phase": "gym,pull"}, {"id": "curl", "name": "哑铃/杠铃弯举", "how": "大臂贴身固定，弯举至肩前，慢落不甩", "phase": "gym,pull"}, {"id": "facepull", "name": "面拉 Face Pull", "how": "绳索对脸拉至额前，外旋肩外展，改善圆肩", "phase": "gym,pull"}, {"id": "pullup_assist", "name": "助力引体向上", "how": "踏板上机，拉至下巴过杠，慢落控速", "phase": "gym,pull"}, {"id": "reardelt", "name": "反向飞鸟 / 反向蝴蝶机", "how": "俯身或面机，后束主导外展，不甩重量", "phase": "gym,pull"}, {"id": "bb_squat", "name": "杠铃深蹲 Back Squat", "how": "杠落肩胛，髋膝同开，蹲至大腿平行，核心全程收紧", "phase": "gym,leg"}, {"id": "legpress", "name": "腿举 Leg Press", "how": "脚踩踏板略宽，膝朝脚尖，不塌腰不锁死", "phase": "gym,leg"}, {"id": "legcurl", "name": "俯卧腿弯举", "how": "勾脚至最大，慢放，腘绳主导", "phase": "gym,leg"}, {"id": "calf", "name": "站姿提踵 Calf Raise", "how": "踮脚至顶停顿1秒，慢落拉伸", "phase": "gym,leg"}, {"id": "bb_ohp", "name": "杠铃肩上推举 Barbell Shoulder Press", "how": "杠铃置于锁骨，垂直推至头顶锁定，核心收紧不塌腰，不耸肩、不借力后仰", "phase": "gym,push"}, {"id": "incline_bench", "name": "杠铃上斜卧推 Incline Bench Press", "how": "上斜凳调30°，杠铃慢放至上胸，推起时夹胸、收肩胛，核心全程收紧不塌腰", "phase": "gym,push"}, {"id": "deadlift", "name": "杠铃硬拉 Deadlift", "how": "杠铃贴紧小腿，髋膝同步伸展站起，背挺直、肩后缩下沉，核心全程绷紧，切忌圆背弓腰", "phase": "gym,pull"}, {"id": "pullup", "name": "自重引体向上 Pull-up", "how": "握距略宽于肩，背阔主导拉至下巴过杠，慢落控速不甩，下落充分伸展", "phase": "gym,pull"}, {"id": "pushup", "name": "标准俯卧撑 Push-up", "how": "手略宽于肩、身体成一条板，胸贴近地面再推起，核心收紧不塌腰；进阶可背包加重量做渐进超负荷", "phase": "upper,full"}, {"id": "situp", "name": "卷腹 Crunch", "how": "仰卧屈膝，腹直肌发力卷起至肩胛离地，慢落不借惯性，下背始终贴地", "phase": "all"}, {"id": "legraise", "name": "悬垂举腿 Hanging Leg Raise", "how": "悬垂或仰卧，双腿伸直慢抬至垂直，控速慢落，下腹主导、不甩腿不晃身", "phase": "all"}], "templates": {"基础激活日": ["pf", "catcow", "bridge", "deadbug", "walk"], "下肢日": ["bridge", "squat", "side", "hipthrust", "step", "walk"], "上肢日": ["birddog", "row", "wallpu", "sabd", "pf", "walk"], "全身日": ["squat", "row", "bridge", "birddog", "pf", "walk"], "有氧恢复日": ["walk", "catcow", "pf"], "胸·三头（器械/哑铃）": ["bench", "incline_db", "pecdeck", "tri_push"], "背·二头（器械/杠铃）": ["lat", "cable_row", "bb_row", "curl", "facepull"], "腿·臀（杠铃/器械）": ["bb_squat", "legpress", "rdl", "legcurl", "calf"], "肩·臂（哑铃/器械）": ["db_ohp", "lateral", "reardelt", "curl", "facepull"], "全身复合（器械）": ["legpress", "bench", "lat", "lateral", "walk"], "上肢推力（杠铃·进阶）": ["bench", "db_ohp", "dip_assist", "tri_push"], "上肢拉力（进阶）": ["pullup_assist", "cable_row", "curl", "facepull"], "放松恢复日": ["catcow", "pf", "deadbug", "bridge", "walk"], "灵活性·泡沫轴放松": ["catcow", "bridge", "deadbug", "sabd", "walk"], "低强度有氧恢复": ["walk", "catcow", "pf"], "薄肌·推日（胸肩三头）": ["incline_bench", "bench", "bb_ohp", "lateral", "tri_push"], "薄肌·拉日（背二头）": ["deadlift", "pullup", "bb_row", "reardelt", "facepull", "curl"], "薄肌·腿日+补强": ["bb_squat", "bb_ohp", "facepull", "lateral", "situp", "legraise", "hipthrust"], "薄肌·自重进阶（无器械）": ["pushup", "pullup", "squat", "bridge", "situp", "walk"]}, "templateMeta": {"基础激活日": {"cat": "居家训练", "stage": "基础"}, "下肢日": {"cat": "居家训练", "stage": "基础"}, "上肢日": {"cat": "居家训练", "stage": "基础"}, "全身日": {"cat": "居家训练", "stage": "基础"}, "有氧恢复日": {"cat": "居家训练", "stage": "基础"}, "胸·三头（器械/哑铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "背·二头（器械/杠铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "腿·臀（杠铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "肩·臂（哑铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "全身复合（器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "上肢推力（杠铃·进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "上肢拉力（进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "放松恢复日": {"cat": "体能恢复", "stage": "基础"}, "灵活性·泡沫轴放松": {"cat": "体能恢复", "stage": "基础"}, "低强度有氧恢复": {"cat": "体能恢复", "stage": "基础"}, "薄肌·推日（胸肩三头）": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·拉日（背二头）": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·腿日+补强": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·自重进阶（无器械）": {"cat": "薄肌战神计划", "stage": "基础"}}, "templateGroups": {"居家训练": {"基础激活日": {"stage": "基础", "acts": ["pf", "catcow", "bridge", "deadbug", "walk"]}, "下肢日": {"stage": "基础", "acts": ["bridge", "squat", "side", "hipthrust", "step", "walk"]}, "上肢日": {"stage": "基础", "acts": ["birddog", "row", "wallpu", "sabd", "pf", "walk"]}, "全身日": {"stage": "基础", "acts": ["squat", "row", "bridge", "birddog", "pf", "walk"]}, "有氧恢复日": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}, "健身房力量训练": {"胸·三头（器械/哑铃）": {"stage": "进阶", "acts": ["bench", "incline_db", "pecdeck", "tri_push"]}, "背·二头（器械/杠铃）": {"stage": "进阶", "acts": ["lat", "cable_row", "bb_row", "curl", "facepull"]}, "腿·臀（杠铃/器械）": {"stage": "进阶", "acts": ["bb_squat", "legpress", "rdl", "legcurl", "calf"]}, "肩·臂（哑铃/器械）": {"stage": "进阶", "acts": ["db_ohp", "lateral", "reardelt", "curl", "facepull"]}, "全身复合（器械）": {"stage": "进阶", "acts": ["legpress", "bench", "lat", "lateral", "walk"]}, "上肢推力（杠铃·进阶）": {"stage": "待解锁", "acts": ["bench", "db_ohp", "dip_assist", "tri_push"]}, "上肢拉力（进阶）": {"stage": "待解锁", "acts": ["pullup_assist", "cable_row", "curl", "facepull"]}}, "体能恢复": {"放松恢复日": {"stage": "基础", "acts": ["catcow", "pf", "deadbug", "bridge", "walk"]}, "灵活性·泡沫轴放松": {"stage": "基础", "acts": ["catcow", "bridge", "deadbug", "sabd", "walk"]}, "低强度有氧恢复": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}, "薄肌战神计划": {"薄肌·推日（胸肩三头）": {"stage": "进阶", "acts": ["incline_bench", "bench", "bb_ohp", "lateral", "tri_push"]}, "薄肌·拉日（背二头）": {"stage": "进阶", "acts": ["deadlift", "pullup", "bb_row", "reardelt", "facepull", "curl"]}, "薄肌·腿日+补强": {"stage": "进阶", "acts": ["bb_squat", "bb_ohp", "facepull", "lateral", "situp", "legraise", "hipthrust"]}, "薄肌·自重进阶（无器械）": {"stage": "基础", "acts": ["pushup", "pullup", "squat", "bridge", "situp", "walk"]}}}};
+const PLAN={"phases": [{"n": "阶段一 · 适应与基础", "w": "第 1–4 周", "d": "建立动作模式与运动习惯，低强度起步，把训练与饮食节奏跑通。重点学动作、不追求强度。"}, {"n": "阶段二 · 力量建立", "w": "第 5–8 周", "d": "用自体重或弹力带/小器械建立全身力量与稳定，打下后续进阶基础。"}, {"n": "阶段三 · 渐进超负荷", "w": "第 9–12 周", "d": "引入哑铃/壶铃或器械，逐步加重，刺激肌肉与力量持续增长。"}, {"n": "阶段四 · 巩固与精雕", "w": "第 13 周起", "d": "维持负荷，盯围度与体成分变化，达标后转维持热量防反弹。"}], "actions": [{"id": "pf", "name": "核心收紧（腹横肌）", "how": "呼气时肚脐轻收向脊柱（束腰感），不憋气，可配合呼吸节奏", "phase": "all"}, {"id": "catcow", "name": "猫牛式 Cat-Cow", "how": "四足位，吸气塌腰抬头、呼气弓背低头，配合呼吸活动脊柱", "phase": "all"}, {"id": "bridge", "name": "臀桥 Glute Bridge", "how": "仰卧夹臀顶髋至肩-髋-膝一线，不塌腰", "phase": "lower,full"}, {"id": "deadbug", "name": "死虫 Dead Bug", "how": "仰卧举腿屈膝，对侧手脚缓伸，腰贴地不塌", "phase": "all"}, {"id": "birddog", "name": "鸟狗式 Bird Dog", "how": "四足位对侧手脚伸出，骨盆稳不晃", "phase": "upper,full"}, {"id": "squat", "name": "徒手/高脚杯深蹲", "how": "臀后坐如坐椅，膝朝脚尖，起身夹臀", "phase": "lower,full"}, {"id": "side", "name": "侧卧抬腿", "how": "上方腿伸直慢抬，下方腰不塌", "phase": "lower,full"}, {"id": "row", "name": "弹力带划船", "how": "肘向后夹背，肩胛后缩，沉肩", "phase": "upper,full"}, {"id": "wallpu", "name": "靠墙俯卧撑", "how": "面对墙斜倾推墙，核心收紧不塌腰", "phase": "upper,full"}, {"id": "hipthrust", "name": "臀推 Hip Thrust", "how": "上背靠凳，顶髋夹臀成线", "phase": "lower,full"}, {"id": "rdl", "name": "罗马尼亚硬拉 RDL", "how": "微屈膝髋后移，背挺直，臀腿后侧发力", "phase": "lower,full"}, {"id": "ohp", "name": "哑铃推举 OHP", "how": "推至头顶，核心收紧不塌腰", "phase": "upper,full"}, {"id": "sabd", "name": "弹力带肩外展", "how": "站姿微屈髋，弹力带固定脚下，双臂体侧慢抬至肩高，不耸肩不塌腰", "phase": "upper,full"}, {"id": "step", "name": "踏步/台阶 Step-up", "how": "一脚踩稳凳或台阶，另一腿跟上不跳，控制下落，膝朝脚尖", "phase": "lower,full"}, {"id": "walk", "name": "快走/低冲击有氧", "how": "心率微升、能正常说话，20-40分钟", "phase": "all"}, {"id": "bench", "name": "杠铃卧推 Bench Press", "how": "杠铃慢放至胸，推起时夹胸收肩胛，核心收紧不塌腰", "phase": "gym,push"}, {"id": "incline_db", "name": "上斜哑铃卧推", "how": "凳调30-45°，哑铃推至胸上方，不耸肩不弹震", "phase": "gym,push"}, {"id": "pecdeck", "name": "器械夹胸 / 龙门架夹胸", "how": "手肘微屈，发力夹向胸前，顶峰停顿1秒", "phase": "gym,push"}, {"id": "tri_push", "name": "绳索三头下压", "how": "大臂贴身，小臂下压至伸直，不甩肩", "phase": "gym,push"}, {"id": "dip_assist", "name": "助力双杠臂屈伸", "how": "踏板上机，身体微前倾练胸、直立练三头，肘不超伸", "phase": "gym,push"}, {"id": "db_ohp", "name": "哑铃肩上推举", "how": "哑铃推至头顶，核心收不塌腰，不耸肩", "phase": "gym,push"}, {"id": "lateral", "name": "哑铃侧平举", "how": "微屈肘体侧抬至肩高，不耸肩不借力甩", "phase": "gym,push"}, {"id": "lat", "name": "高位下拉 Lat Pulldown", "how": "握距略宽于肩，拉至锁骨，沉肩不耸，背阔主导", "phase": "gym,pull"}, {"id": "cable_row", "name": "坐姿绳索划船", "how": "挺胸收腹，拉至腹肌，肩胛后缩，不圆肩", "phase": "gym,pull"}, {"id": "bb_row", "name": "杠铃划船", "how": "髋铰链微前倾，拉杠至腹，背挺直不圆背", "phase": "gym,pull"}, {"id": "curl", "name": "哑铃/杠铃弯举", "how": "大臂贴身固定，弯举至肩前，慢落不甩", "phase": "gym,pull"}, {"id": "facepull", "name": "面拉 Face Pull", "how": "绳索对脸拉至额前，外旋肩外展，改善圆肩", "phase": "gym,pull"}, {"id": "pullup_assist", "name": "助力引体向上", "how": "踏板上机，拉至下巴过杠，慢落控速", "phase": "gym,pull"}, {"id": "reardelt", "name": "反向飞鸟 / 反向蝴蝶机", "how": "俯身或面机，后束主导外展，不甩重量", "phase": "gym,pull"}, {"id": "bb_squat", "name": "杠铃深蹲 Back Squat", "how": "杠落肩胛，髋膝同开，蹲至大腿平行，核心全程收紧", "phase": "gym,leg"}, {"id": "legpress", "name": "腿举 Leg Press", "how": "脚踩踏板略宽，膝朝脚尖，不塌腰不锁死", "phase": "gym,leg"}, {"id": "legcurl", "name": "俯卧腿弯举", "how": "勾脚至最大，慢放，腘绳主导", "phase": "gym,leg"}, {"id": "calf", "name": "站姿提踵 Calf Raise", "how": "踮脚至顶停顿1秒，慢落拉伸", "phase": "gym,leg"}, {"id": "bb_ohp", "name": "杠铃肩上推举 Barbell Shoulder Press", "how": "杠铃置于锁骨，垂直推至头顶锁定，核心收紧不塌腰，不耸肩、不借力后仰", "phase": "gym,push"}, {"id": "incline_bench", "name": "杠铃上斜卧推 Incline Bench Press", "how": "上斜凳调30°，杠铃慢放至上胸，推起时夹胸、收肩胛，核心全程收紧不塌腰", "phase": "gym,push"}, {"id": "deadlift", "name": "杠铃硬拉 Deadlift", "how": "杠铃贴紧小腿，髋膝同步伸展站起，背挺直、肩后缩下沉，核心全程绷紧，切忌圆背弓腰", "phase": "gym,pull"}, {"id": "pullup", "name": "自重引体向上 Pull-up", "how": "握距略宽于肩，背阔主导拉至下巴过杠，慢落控速不甩，下落充分伸展", "phase": "gym,pull"}, {"id": "pushup", "name": "标准俯卧撑 Push-up", "how": "手略宽于肩、身体成一条板，胸贴近地面再推起，核心收紧不塌腰；进阶可背包加重量做渐进超负荷", "phase": "upper,full"}, {"id": "situp", "name": "卷腹 Crunch", "how": "仰卧屈膝，腹直肌发力卷起至肩胛离地，慢落不借惯性，下背始终贴地", "phase": "all"}, {"id": "legraise", "name": "悬垂举腿 Hanging Leg Raise", "how": "悬垂或仰卧，双腿伸直慢抬至垂直，控速慢落，下腹主导、不甩腿不晃身", "phase": "all"}, {"id": "band_pullup", "name": "弹力带辅助引体（退阶）", "how": "弹力带挂杆上、单膝踩住（套紧防回弹打脸）；给向上助力。能做 10+ 个即可尝试去掉弹力带做标准引体", "phase": "gym,pull"}, {"id": "neg_pullup", "name": "离心引体 / 跳上慢下（无器械退阶）", "how": "跳上去让下巴过杠，然后用 3-5 秒慢慢下放到底；没有弹力带时练引体的老办法，能做十几个离心就能做完整引体", "phase": "gym,pull"}, {"id": "weighted_pullup", "name": "负重引体（进阶）", "how": "负重腰带挂杠铃片，从中量起步逐级加。体重轻的人用自重会没难度，靠加负荷继续渐进超负荷", "phase": "gym,pull"}, {"id": "incline_db_db", "name": "上斜哑铃卧推（约25°）", "how": "上斜凳角度约 25°，哑铃下放到底时行程长、拉伸感好；推起不耸肩不弹震。家庭或健身房都适用", "phase": "gym,push"}, {"id": "seated_lateral", "name": "坐姿哑铃侧平举", "how": "坐哑铃凳上身固定住再外展，比站姿借力少很多；重量会比站姿低 20-30%，但刺激更准，不靠上斜方代偿", "phase": "gym,push"}, {"id": "band_facepull", "name": "弹力带脸拉", "how": "弹力带固定高处，拉向视线高度并停顿；用弹力带做肩袖小肌肉训练，和面拉同效，居家可用", "phase": "gym,pull"}, {"id": "zercher", "name": "泽奇深蹲 Zercher Squat", "how": "暂不熟，先记录", "phase": "gym,leg"}, {"id": "oh_ext", "name": "哑铃颈后臂屈伸", "how": "双手持一只哑铃于颈后，大臂固定不外张，小臂伸直；务必小心砸头或落地", "phase": "gym,push"}, {"id": "tri_dip", "name": "凳上臂屈伸（三头自重）", "how": "身体往下贴住凳边、把肘提起来顶住，几乎无法借力；上不了大重量但刺激好，二头三头能用 10kg 做组就很棒了", "phase": "upper,full"}], "templates": {"基础激活日": ["pf", "catcow", "bridge", "deadbug", "walk"], "下肢日": ["bridge", "squat", "side", "hipthrust", "step", "walk"], "上肢日": ["birddog", "row", "wallpu", "sabd", "pf", "walk"], "全身日": ["squat", "row", "bridge", "birddog", "pf", "walk"], "有氧恢复日": ["walk", "catcow", "pf"], "胸·三头（器械/哑铃）": ["bench", "incline_db", "pecdeck", "tri_push"], "背·二头（器械/杠铃）": ["lat", "cable_row", "bb_row", "curl", "facepull"], "腿·臀（杠铃/器械）": ["bb_squat", "legpress", "rdl", "legcurl", "calf"], "肩·臂（哑铃/器械）": ["db_ohp", "lateral", "reardelt", "curl", "facepull"], "全身复合（器械）": ["legpress", "bench", "lat", "lateral", "walk"], "上肢推力（杠铃·进阶）": ["bench", "db_ohp", "dip_assist", "tri_push"], "上肢拉力（进阶）": ["pullup_assist", "cable_row", "curl", "facepull"], "放松恢复日": ["catcow", "pf", "deadbug", "bridge", "walk"], "灵活性·泡沫轴放松": ["catcow", "bridge", "deadbug", "sabd", "walk"], "低强度有氧恢复": ["walk", "catcow", "pf"], "薄肌·A套餐（拉+肩+二头）": ["pullup", "band_pullup", "cable_row", "seated_lateral", "facepull", "curl", "legraise"], "薄肌·B套餐（推+腿+三头）": ["incline_bench", "incline_db_db", "bb_squat", "zercher", "rdl", "tri_dip", "oh_ext", "pullup"], "薄肌·推日（胸肩三头）": ["incline_bench", "bench", "bb_ohp", "lateral", "tri_push"], "薄肌·拉日（背二头）": ["deadlift", "pullup", "bb_row", "reardelt", "facepull", "curl"], "薄肌·腿日+补强": ["bb_squat", "bb_ohp", "facepull", "lateral", "situp", "legraise", "hipthrust"], "薄肌·自重进阶（无器械）": ["pushup", "pullup", "squat", "bridge", "situp", "walk"]}, "templateMeta": {"基础激活日": {"cat": "居家训练", "stage": "基础"}, "下肢日": {"cat": "居家训练", "stage": "基础"}, "上肢日": {"cat": "居家训练", "stage": "基础"}, "全身日": {"cat": "居家训练", "stage": "基础"}, "有氧恢复日": {"cat": "居家训练", "stage": "基础"}, "胸·三头（器械/哑铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "背·二头（器械/杠铃）": {"cat": "健身房力量训练", "stage": "进阶"}, "腿·臀（杠铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "肩·臂（哑铃/器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "全身复合（器械）": {"cat": "健身房力量训练", "stage": "进阶"}, "上肢推力（杠铃·进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "上肢拉力（进阶）": {"cat": "健身房力量训练", "stage": "待解锁"}, "放松恢复日": {"cat": "体能恢复", "stage": "基础"}, "灵活性·泡沫轴放松": {"cat": "体能恢复", "stage": "基础"}, "低强度有氧恢复": {"cat": "体能恢复", "stage": "基础"}, "薄肌·A套餐（拉+肩+二头）": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·B套餐（推+腿+三头）": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·推日（胸肩三头）": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·拉日（背二头）": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·腿日+补强": {"cat": "薄肌战神计划", "stage": "进阶"}, "薄肌·自重进阶（无器械）": {"cat": "薄肌战神计划", "stage": "基础"}}, "templateGroups": {"居家训练": {"基础激活日": {"stage": "基础", "acts": ["pf", "catcow", "bridge", "deadbug", "walk"]}, "下肢日": {"stage": "基础", "acts": ["bridge", "squat", "side", "hipthrust", "step", "walk"]}, "上肢日": {"stage": "基础", "acts": ["birddog", "row", "wallpu", "sabd", "pf", "walk"]}, "全身日": {"stage": "基础", "acts": ["squat", "row", "bridge", "birddog", "pf", "walk"]}, "有氧恢复日": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}, "健身房力量训练": {"胸·三头（器械/哑铃）": {"stage": "进阶", "acts": ["bench", "incline_db", "pecdeck", "tri_push"]}, "背·二头（器械/杠铃）": {"stage": "进阶", "acts": ["lat", "cable_row", "bb_row", "curl", "facepull"]}, "腿·臀（杠铃/器械）": {"stage": "进阶", "acts": ["bb_squat", "legpress", "rdl", "legcurl", "calf"]}, "肩·臂（哑铃/器械）": {"stage": "进阶", "acts": ["db_ohp", "lateral", "reardelt", "curl", "facepull"]}, "全身复合（器械）": {"stage": "进阶", "acts": ["legpress", "bench", "lat", "lateral", "walk"]}, "上肢推力（杠铃·进阶）": {"stage": "待解锁", "acts": ["bench", "db_ohp", "dip_assist", "tri_push"]}, "上肢拉力（进阶）": {"stage": "待解锁", "acts": ["pullup_assist", "cable_row", "curl", "facepull"]}}, "体能恢复": {"放松恢复日": {"stage": "基础", "acts": ["catcow", "pf", "deadbug", "bridge", "walk"]}, "灵活性·泡沫轴放松": {"stage": "基础", "acts": ["catcow", "bridge", "deadbug", "sabd", "walk"]}, "低强度有氧恢复": {"stage": "基础", "acts": ["walk", "catcow", "pf"]}}, "薄肌战神计划": {"薄肌·A套餐（拉+肩+二头）": {"stage": "进阶", "acts": ["pullup", "band_pullup", "cable_row", "seated_lateral", "facepull", "curl", "legraise"]}, "薄肌·B套餐（推+腿+三头）": {"stage": "进阶", "acts": ["incline_bench", "incline_db_db", "bb_squat", "zercher", "rdl", "tri_dip", "oh_ext", "pullup"]}, "薄肌·推日（胸肩三头）": {"stage": "进阶", "acts": ["incline_bench", "bench", "bb_ohp", "lateral", "tri_push"]}, "薄肌·拉日（背二头）": {"stage": "进阶", "acts": ["deadlift", "pullup", "bb_row", "reardelt", "facepull", "curl"]}, "薄肌·腿日+补强": {"stage": "进阶", "acts": ["bb_squat", "bb_ohp", "facepull", "lateral", "situp", "legraise", "hipthrust"]}, "薄肌·自重进阶（无器械）": {"stage": "基础", "acts": ["pushup", "pullup", "squat", "bridge", "situp", "walk"]}}}};
 
 function freshData(){
   return {
@@ -443,24 +944,71 @@ function mergeData(d){
   return m;
 }
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+/* ---------- 预设卡通头像 ----------
+   用内联 SVG 画，不依赖 emoji 字体，所以 Windows / Android / iOS 上长得一样。
+   12 款统一「圆形几何 + 两只圆眼」的画风：底色矩形 + 耳朵 + 头 + 五官，
+   只有耳朵形状、配色、鼻子嘴型不同，因此看上去像同一套。
+   profile.avatar 存 key；undefined = 还没选过（按档案名 hash 自动分配一个），
+   "letter" = 用户主动选回「首字母」样式。 */
+const AVATARS={
+  fox:{n:"狐狸",bg:"#f0a04b",s:`<path d="M9 2.5 16.5 11 6.5 12.5Z" fill="#dc8a35"/><path d="M31 2.5 23.5 11 33.5 12.5Z" fill="#dc8a35"/><path d="M10.6 5.6 14.8 10.4 9.8 11.3Z" fill="#bf7430"/><path d="M29.4 5.6 25.2 10.4 30.2 11.3Z" fill="#bf7430"/><circle cx="20" cy="23" r="13" fill="#f0a04b"/><ellipse cx="20" cy="28.6" rx="6.8" ry="5.2" fill="#fff4e6"/><circle cx="14.6" cy="21.4" r="1.9" fill="#33230f"/><circle cx="25.4" cy="21.4" r="1.9" fill="#33230f"/><ellipse cx="20" cy="26.4" rx="1.9" ry="1.4" fill="#33230f"/><circle cx="10.2" cy="25.8" r="1.8" fill="#fff" opacity=".28"/><circle cx="29.8" cy="25.8" r="1.8" fill="#fff" opacity=".28"/>`},
+  cat:{n:"猫",bg:"#93a9c9",s:`<path d="M9 3.5 17.5 10.5 7 13Z" fill="#7d94b7"/><path d="M31 3.5 22.5 10.5 33 13Z" fill="#7d94b7"/><path d="M11 6.8 15.4 10.7 10 11.5Z" fill="#e7aebf"/><path d="M29 6.8 24.6 10.7 30 11.5Z" fill="#e7aebf"/><circle cx="20" cy="23" r="12.5" fill="#aec1db"/><circle cx="14.6" cy="21.2" r="1.9" fill="#2b3444"/><circle cx="25.4" cy="21.2" r="1.9" fill="#2b3444"/><path d="M18.5 26.1 21.5 26.1 20 27.5Z" fill="#e2778f"/><path d="M20 27.5v1.2M20 28.7q-1.5 1.3-2.8.2M20 28.7q1.5 1.3 2.8.2" stroke="#2b3444" stroke-width=".85" fill="none" stroke-linecap="round"/>`},
+  panda:{n:"熊猫",bg:"#eef1f5",s:`<circle cx="10.4" cy="11" r="5.4" fill="#33373e"/><circle cx="29.6" cy="11" r="5.4" fill="#33373e"/><circle cx="20" cy="23" r="13" fill="#fdfdfe"/><ellipse cx="14.3" cy="21.4" rx="3.6" ry="4.3" fill="#33373e" transform="rotate(-16 14.3 21.4)"/><ellipse cx="25.7" cy="21.4" rx="3.6" ry="4.3" fill="#33373e" transform="rotate(16 25.7 21.4)"/><circle cx="14.7" cy="21.6" r="1.5" fill="#fdfdfe"/><circle cx="25.3" cy="21.6" r="1.5" fill="#fdfdfe"/><ellipse cx="20" cy="27.6" rx="1.9" ry="1.5" fill="#33373e"/><path d="M20 29.1v1M20 30.1q-1.4 1.2-2.6.2M20 30.1q1.4 1.2 2.6.2" stroke="#33373e" stroke-width=".8" fill="none" stroke-linecap="round"/><circle cx="9.6" cy="25.8" r="2.2" fill="#f5a7b4" opacity=".5"/><circle cx="30.4" cy="25.8" r="2.2" fill="#f5a7b4" opacity=".5"/>`},
+  bear:{n:"熊",bg:"#bb8d63",s:`<circle cx="9.6" cy="10.6" r="5" fill="#a97a51"/><circle cx="30.4" cy="10.6" r="5" fill="#a97a51"/><circle cx="9.6" cy="10.6" r="2.4" fill="#d8ae86"/><circle cx="30.4" cy="10.6" r="2.4" fill="#d8ae86"/><circle cx="20" cy="23" r="12.8" fill="#c99a6e"/><ellipse cx="20" cy="28.2" rx="6.6" ry="5" fill="#f3e3cf"/><circle cx="14.7" cy="21.4" r="1.9" fill="#3a2a18"/><circle cx="25.3" cy="21.4" r="1.9" fill="#3a2a18"/><ellipse cx="20" cy="26.2" rx="2.2" ry="1.7" fill="#3a2a18"/><path d="M20 27.9v1.2M20 29.1q-1.5 1.3-2.8.2M20 29.1q1.5 1.3 2.8.2" stroke="#3a2a18" stroke-width=".85" fill="none" stroke-linecap="round"/>`},
+  koala:{n:"考拉",bg:"#aab5be",s:`<circle cx="9" cy="13" r="6.4" fill="#97a3ad"/><circle cx="31" cy="13" r="6.4" fill="#97a3ad"/><circle cx="9" cy="13" r="3.2" fill="#c3ccd3"/><circle cx="31" cy="13" r="3.2" fill="#c3ccd3"/><circle cx="20" cy="23" r="13" fill="#bcc6ce"/><circle cx="14.4" cy="21.2" r="2" fill="#343a40"/><circle cx="25.6" cy="21.2" r="2" fill="#343a40"/><ellipse cx="20" cy="26.6" rx="3.4" ry="2.7" fill="#4a5057"/><circle cx="10.4" cy="26.4" r="1.7" fill="#fff" opacity=".32"/><circle cx="29.6" cy="26.4" r="1.7" fill="#fff" opacity=".32"/>`},
+  rabbit:{n:"兔子",bg:"#f0bccb",s:`<ellipse cx="14.4" cy="7" rx="3.4" ry="7" fill="#eaa8bb"/><ellipse cx="25.6" cy="7" rx="3.4" ry="7" fill="#eaa8bb"/><ellipse cx="14.4" cy="7.4" rx="1.6" ry="4.6" fill="#fce2ea"/><ellipse cx="25.6" cy="7.4" rx="1.6" ry="4.6" fill="#fce2ea"/><circle cx="20" cy="24" r="12.5" fill="#fbdce5"/><circle cx="14.6" cy="22.4" r="1.9" fill="#4a2a35"/><circle cx="25.4" cy="22.4" r="1.9" fill="#4a2a35"/><path d="M18.5 27.2 21.5 27.2 20 28.5Z" fill="#e2778f"/><path d="M20 28.5v1.2M20 29.7q-1.5 1.3-2.8.2M20 29.7q1.5 1.3 2.8.2" stroke="#4a2a35" stroke-width=".85" fill="none" stroke-linecap="round"/><circle cx="10" cy="26.8" r="1.9" fill="#f5a7b4" opacity=".55"/><circle cx="30" cy="26.8" r="1.9" fill="#f5a7b4" opacity=".55"/>`},
+  dog:{n:"小狗",bg:"#d9b183",s:`<ellipse cx="7.4" cy="19" rx="4.4" ry="7" fill="#c69b6a" transform="rotate(14 7.4 19)"/><ellipse cx="32.6" cy="19" rx="4.4" ry="7" fill="#c69b6a" transform="rotate(-14 32.6 19)"/><circle cx="20" cy="22" r="12.8" fill="#e6c39a"/><ellipse cx="20" cy="27.4" rx="6.6" ry="5" fill="#fff4e4"/><circle cx="14.7" cy="20.4" r="1.9" fill="#3a2b18"/><circle cx="25.3" cy="20.4" r="1.9" fill="#3a2b18"/><ellipse cx="20" cy="25.4" rx="2.3" ry="1.8" fill="#3a2b18"/><path d="M20 27.2v1.2M20 28.4q-1.5 1.3-2.8.2M20 28.4q1.5 1.3 2.8.2" stroke="#3a2b18" stroke-width=".85" fill="none" stroke-linecap="round"/>`},
+  penguin:{n:"企鹅",bg:"#7d99c0",s:`<circle cx="20" cy="21.4" r="13" fill="#40536f"/><ellipse cx="20" cy="25.4" rx="9" ry="9.6" fill="#fdfdfe"/><circle cx="15.4" cy="20.4" r="1.9" fill="#22293a"/><circle cx="24.6" cy="20.4" r="1.9" fill="#22293a"/><path d="M20 24 23.4 26.2 20 28.4 16.6 26.2Z" fill="#f0a04b"/>`},
+  frog:{n:"青蛙",bg:"#97cd74",s:`<circle cx="11.6" cy="10.6" r="5.6" fill="#8ac266"/><circle cx="28.4" cy="10.6" r="5.6" fill="#8ac266"/><circle cx="11.6" cy="10.2" r="3.1" fill="#fdfdfe"/><circle cx="28.4" cy="10.2" r="3.1" fill="#fdfdfe"/><circle cx="11.8" cy="10.4" r="1.6" fill="#2e4a1c"/><circle cx="28.2" cy="10.4" r="1.6" fill="#2e4a1c"/><circle cx="20" cy="23.8" r="12.6" fill="#a5d982"/><path d="M13.4 24.4q6.6 4.4 13.2 0" stroke="#2e4a1c" stroke-width="1.1" fill="none" stroke-linecap="round"/><circle cx="11.6" cy="27.4" r="1.9" fill="#fff" opacity=".3"/><circle cx="28.4" cy="27.4" r="1.9" fill="#fff" opacity=".3"/>`},
+  tiger:{n:"老虎",bg:"#f2a43c",s:`<circle cx="9.4" cy="11" r="5.2" fill="#e08e2a"/><circle cx="30.6" cy="11" r="5.2" fill="#e08e2a"/><circle cx="9.4" cy="11" r="2.5" fill="#f7c58a"/><circle cx="30.6" cy="11" r="2.5" fill="#f7c58a"/><circle cx="20" cy="23" r="13" fill="#f2a43c"/><path d="M20 12.6v3M9.6 19.8 13.2 20.8M30.4 19.8 26.8 20.8M11.4 25 14.6 25.8M28.6 25 25.4 25.8" stroke="#3a2a12" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="20" cy="28.4" rx="6.6" ry="5" fill="#fff3e0"/><circle cx="14.7" cy="21.6" r="1.9" fill="#33230f"/><circle cx="25.3" cy="21.6" r="1.9" fill="#33230f"/><path d="M18.4 26 21.6 26 20 27.5Z" fill="#33230f"/><path d="M20 27.9v1.1M20 29q-1.5 1.3-2.8.2M20 29q1.5 1.3 2.8.2" stroke="#33230f" stroke-width=".85" fill="none" stroke-linecap="round"/>`},
+  monkey:{n:"猴子",bg:"#c98d5c",s:`<circle cx="8.2" cy="17.6" r="4.8" fill="#b87c4c"/><circle cx="31.8" cy="17.6" r="4.8" fill="#b87c4c"/><circle cx="8.2" cy="17.6" r="2.6" fill="#e0b48c"/><circle cx="31.8" cy="17.6" r="2.6" fill="#e0b48c"/><circle cx="20" cy="22.4" r="12.6" fill="#c98d5c"/><ellipse cx="20" cy="24.6" rx="9.2" ry="8.2" fill="#ecc9a4"/><circle cx="15.8" cy="21.6" r="1.9" fill="#3a2716"/><circle cx="24.2" cy="21.6" r="1.9" fill="#3a2716"/><ellipse cx="20" cy="26.4" rx="1.8" ry="1.4" fill="#3a2716"/><path d="M20 27.8v1M20 28.8q-1.4 1.2-2.6.2M20 28.8q1.4 1.2 2.6.2" stroke="#3a2716" stroke-width=".85" fill="none" stroke-linecap="round"/>`},
+  owl:{n:"猫头鹰",bg:"#9b8fd6",s:`<path d="M9 4 14.4 10.6 8 12.4Z" fill="#8478c4"/><path d="M31 4 25.6 10.6 32 12.4Z" fill="#8478c4"/><circle cx="20" cy="23" r="13" fill="#b0a5e6"/><circle cx="14.6" cy="21.6" r="4.6" fill="#fdfdfe"/><circle cx="25.4" cy="21.6" r="4.6" fill="#fdfdfe"/><circle cx="14.6" cy="21.8" r="2" fill="#2e2748"/><circle cx="25.4" cy="21.8" r="2" fill="#2e2748"/><path d="M20 24.6 22.8 26.6 20 28.6 17.2 26.6Z" fill="#f0b04b"/><path d="M9.8 28 13 28.8M30.2 28 27 28.8" stroke="#8478c4" stroke-width="1.2" stroke-linecap="round"/>`}
+};
+const AV_KEYS=Object.keys(AVATARS);
+function hashStr(s){let h=0;s=s||"";for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h;}
+function avatarSvg(k){
+  const a=AVATARS[k];if(!a)return "";
+  return '<svg class="avsvg" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" fill="'+a.bg+'"/>'+a.s+'</svg>';
+}
+/* 统一出口：有头像 key 就出 SVG，否则回落「首字母 + 渐变」旧样式。
+   o.cls 追加类名（如 active），o.attrs 追加属性（如 onclick/title）。 */
+function avatarHTML(p,o){
+  o=o||{};
+  const cls=["avatar"].concat(o.cls?[o.cls]:[]).join(" ");
+  const at=o.attrs?" "+o.attrs:"";
+  if(p.avatar&&AVATARS[p.avatar])return '<div class="'+cls+' av-svg"'+at+">"+avatarSvg(p.avatar)+"</div>";
+  const c=colorFor(p.name);
+  return '<div class="'+cls+'" style="background:linear-gradient(135deg,'+c+','+c+'cc)"'+at+">"+avatarLabel(p.name)+"</div>";
+}
+/* 老档案（无 avatar 字段）按档案名 hash 稳定分配一个，避免每次刷新都换脸 */
+function ensureAvatarsOn(root){
+  if(!root||!root.profiles)return root;
+  Object.values(root.profiles).forEach(function(p){
+    if(p.avatar===undefined)p.avatar=AV_KEYS[hashStr(p.name)%AV_KEYS.length];
+  });
+  return root;
+}
+function ensureAvatars(){ensureAvatarsOn(ROOT);}
+
 function freshRoot(){
   const id="p1";
-  return {active:id, profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:freshData()}}};
+  return {active:id, profiles:{[id]:{id:id,name:"我的档案",avatar:"fox",createdAt:todayStr(),data:freshData()}}};
 }
 function load(){
   try{
     let raw=localStorage.getItem(DB_KEY);
     if(!raw){
       const old=localStorage.getItem("ppf_v2");
-      if(old){try{const d=JSON.parse(old);if(d&&d.profiles)return d;if(d){const id="p1";return {active:id,profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:mergeData(d)}}};}}catch(e){}}
-      return freshRoot();
+      if(old){try{const d=JSON.parse(old);if(d&&d.profiles)return ensureAvatarsOn(d);if(d){const id="p1";return ensureAvatarsOn({active:id,profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:mergeData(d)}}});}}catch(e){}}
+      return ensureAvatarsOn(freshRoot());
     }
     const parsed=JSON.parse(raw);
-    if(!parsed||!parsed.profiles){const id="p1";return {active:id,profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:mergeData(parsed)}}};}
+    if(!parsed||!parsed.profiles){const id="p1";return ensureAvatarsOn({active:id,profiles:{[id]:{id:id,name:"我的档案",createdAt:todayStr(),data:mergeData(parsed)}}});}
     Object.values(parsed.profiles).forEach(p=>{p.data=mergeData(p.data);});
     if(!parsed.profiles[parsed.active])parsed.active=Object.keys(parsed.profiles)[0];
-    return parsed;
-  }catch(e){storageOK=false;return freshRoot();}
+    return ensureAvatarsOn(parsed);
+  }catch(e){storageOK=false;return ensureAvatarsOn(freshRoot());}
 }
 function save(){try{localStorage.setItem(DB_KEY,JSON.stringify(ROOT));storageOK=true;}catch(e){storageOK=false;}}
 
@@ -483,10 +1031,9 @@ function colorFor(name){
 function avatarLabel(name){return (name||'?').trim().charAt(0).toUpperCase();}
 function renderAvatars(){
   const el=$("pf_avatars"); if(!el)return; const cur=ROOT.active;
-  let html=Object.values(ROOT.profiles).map(p=>{
-    const c=colorFor(p.name);
-    return `<div class="avatar${p.id===cur?' active':''}" style="background:linear-gradient(135deg,${c},${c}cc)" onclick="switchProfile('${p.id}')" title="${esc(p.name)}">${avatarLabel(p.name)}</div>`;
-  }).join("");
+  let html=Object.values(ROOT.profiles).map(p=>
+    avatarHTML(p,{cls:p.id===cur?"active":"",attrs:`onclick="switchProfile('${p.id}')" title="${esc(p.name)}"`})
+  ).join("");
   html+=`<div class="avatar add" onclick="showPage('profiles')" title="管理档案 / 新建"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:block"><rect x="10" y="4" width="4" height="16" rx="1"/><rect x="4" y="10" width="16" height="4" rx="1"/></svg></div>`;
   el.innerHTML=html;
 }
@@ -494,14 +1041,35 @@ function renderPfList(){
   const el=$("pf_list"); if(!el)return;
   const ids=Object.keys(ROOT.profiles);
   el.innerHTML=Object.values(ROOT.profiles).map(p=>{
-    const c=colorFor(p.name),pr=p.data.profile,act=p.id===ROOT.active;
+    const pr=p.data.profile,act=p.id===ROOT.active;
     const tag=`${pr.gender||'?'} ${pr.age||'—'}岁${pr.height?' · '+pr.height+'cm':''} → ${pr.weightGoal||'?'}kg`;
     return `<div class="pf-row${act?' active':''}">
-      <div class="avatar" style="background:linear-gradient(135deg,${c},${c}cc);cursor:default">${avatarLabel(p.name)}</div>
+      ${avatarHTML(p,{})}
       <div class="pf-meta"><div class="pf-name">${esc(p.name)}${act?' <span class="cur-tag">当前</span>':''}</div><div class="pf-sub">${tag}</div></div>
       <div class="pf-ops">${act?'':`<button class="mini-btn" onclick="switchProfile('${p.id}')">切换</button>`}<button class="mini-btn" onclick="editProfileName('${p.id}')">改名</button>${ids.length>1?`<button class="mini-btn del" onclick="delProfileById('${p.id}')">删除</button>`:''}</div>
     </div>`;
   }).join("");
+}
+/* 头像选择器：13 格 = 12 个卡通头像 + 「字母」 */
+function renderAvatarPicker(){
+  const el=$("av_pick"); if(!el)return;
+  const p=ROOT.profiles[ROOT.active]; if(!p)return;
+  const cur=(p.avatar&&AVATARS[p.avatar])?p.avatar:"letter";
+  const items=[{k:"letter",n:"字母"}].concat(AV_KEYS.map(k=>({k:k,n:AVATARS[k].n})));
+  el.innerHTML=items.map(it=>{
+    const on=it.k===cur?" on":"";
+    const inner=it.k==="letter"
+      ?`<span class="av-let">${esc(avatarLabel(p.name))}</span>`
+      :avatarSvg(it.k);
+    return `<button type="button" class="avpick${on}" onclick="setAvatar('${it.k}')" title="${esc(it.n)}" aria-label="头像：${esc(it.n)}" aria-pressed="${it.k===cur}">${inner}</button>`;
+  }).join("");
+  const nm=$("pf_av_name");
+  if(nm)nm.textContent=cur==="letter"?"字母":AVATARS[cur].n;
+}
+function setAvatar(k){
+  const p=ROOT.profiles[ROOT.active]; if(!p)return;
+  if(k==="letter")p.avatar="letter";else if(AVATARS[k])p.avatar=k;else return;
+  save();renderAvatars();renderPfList();renderAvatarPicker();
 }
 function editProfileName(id){
   const nm=prompt("修改档案名：",ROOT.profiles[id].name);
@@ -516,7 +1084,7 @@ function delProfileById(id){
   save();renderProfiles();renderAll();
 }
 function renderProfiles(){
-  renderAvatars();renderPfList();
+  renderAvatars();renderPfList();renderAvatarPicker();
   const p=ROOT.profiles[ROOT.active];
   $("pf_cur_name").textContent=p.name;
   $("pf_info_name").value=p.name;
@@ -536,7 +1104,7 @@ function newProfile(){
   const nm=($("np_name").value||"").trim();
   if(!nm){alert("请填写档案名");return;}
   const id=uid();
-  ROOT.profiles[id]={id:id,name:nm,createdAt:todayStr(),data:freshData()};
+  ROOT.profiles[id]={id:id,name:nm,avatar:AV_KEYS[Math.floor(Math.random()*AV_KEYS.length)],createdAt:todayStr(),data:freshData()};
   ROOT.active=id;DB=ROOT.profiles[id].data;save();
   $("np_name").value="";
   renderProfiles();renderAll();
@@ -592,47 +1160,118 @@ function calcBMR(w){const p=DB.profile;return Math.round(10*w+6.25*p.height-5*p.
 function calcTDEE(bmr){return Math.round(bmr*DB.activity);}
 function recoIntake(tdee){const deficit=450;return {cal:Math.round(tdee-deficit),pro:Math.round(2.0*(DB.weights.length?DB.weights[DB.weights.length-1].weight:DB.profile.weightStart))};}
 
-function moveNavSlider(){const s=$("navSlider");if(!s)return;const ab=$("nav").querySelector('button.active');if(!ab)return;s.style.width=ab.offsetWidth+'px';s.style.transform='translateX('+ab.offsetLeft+'px)';}
-function showPage(p,dir){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("nav").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.p===p));const pg=$(p);pg.classList.add("active");
-  pg.style.setProperty('--px',(dir>=0?14:-14)+'px');
-  const ab=$("nav").querySelector('button.active');if(ab)ab.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
-  moveNavSlider();
-  if(p==="today")renderToday();if(p==="weight")renderWeight();if(p==="train")renderTrain();if(p==="diet")renderDiet();if(p==="progress")renderProgress();if(p==="ref")renderRef();if(p==="data")renderData();if(p==="profiles")renderProfiles();if(p==="trash")renderTrash();}
+/* 导航：底部 tab bar（5 个一级页 + 「更多」页）。
+   「更多」不再是可展开的面板，而是一个真实页面（#more），里面是 4 个低频入口的列表。
+   于是导航只有一处状态（哪个 tab 亮），也不存在任何会遮盖内容的东西。 */
+const MORE_PAGES=["ref","data","profiles","trash"];
+/* 二级页与「更多」页本身都算在「更多」名下；否则用户停在二级页时导航上没有任何指示 */
+function syncMoreActive(){
+  const cur=curPage();
+  const mb=$("nav")&&$("nav").querySelector('button[data-p="more"]');
+  if(mb)mb.classList.toggle("active",MORE_PAGES.indexOf(cur)>=0||cur==="more");
+}
+function showPage(p,dir){
+  if(!$(p))p="today";
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  $(p).classList.add("active");
+  /* 一级页靠 data-p 直接命中；二级页没有自己的 tab，交给 syncMoreActive 落到「更多」上 */
+  $("nav").querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.dataset.p===p));
+  syncMoreActive();
+  if(p==="today")renderToday();if(p==="weight")renderWeight();if(p==="train")renderTrain();if(p==="diet")renderDiet();if(p==="progress")renderProgress();if(p==="ref")renderRef();if(p==="data")renderData();if(p==="profiles")renderProfiles();if(p==="trash")renderTrash();if(p==="more")renderMore();
+}
 
-document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.p));
+/* 底部 tab bar 的跳转绑定：每个按钮都带 data-p，统一走 showPage */
+document.querySelectorAll("#nav button[data-p]").forEach(b=>b.onclick=()=>showPage(b.dataset.p));
 
 /* ---------- 今日 ---------- */
+/* 饮食指标表：统一由这里生成，今日页与饮食页共用，保证两处表现一致。
+   D 版把它从「2×2 卡片网格」改成四行表格（项目｜摄入｜目标｜达成），
+   项目格里带一条内联迷你条——同样的信息，纵向高度只剩原来的一半。
+   四个营养素共用品牌色，只有「超标 / 接近目标」才变色：颜色在这里是状态信号，不是分类装饰。 */
+function metricCards(k,p,f,c){
+  const t=DB.targets;
+  const items=[
+    {lbl:"热量",val:k,tg:t.calories,unit:"kcal"},
+    {lbl:"蛋白质",val:p,tg:t.protein,unit:"g"},
+    {lbl:"脂肪",val:f,tg:t.fat,unit:"g"},
+    {lbl:"碳水",val:c,tg:t.carbs,unit:"g"}
+  ];
+  const rows=items.map(it=>{
+    const tg=it.tg||1;
+    const raw=it.val/tg*100;
+    const pct=Math.min(100,raw);
+    const over=it.val>tg;
+    const near=!over&&raw>=90;
+    const state=over?"over":(near?"near":"");
+    return `<div class="drow ${state}">
+      <div><div class="nm">${it.lbl}<span class="u">${it.unit}</span></div><div class="dspark"><i style="width:${pct}%"></i></div></div>
+      <div class="ac">${it.val.toFixed(0)}</div>
+      <div class="tg">${tg}</div>
+      <div class="pct">${raw.toFixed(0)}%</div>
+    </div>`;
+  }).join("");
+  return `<div class="dtable">
+    <div class="dhd"><span>营养素</span><span>摄入</span><span>目标</span><span>达成</span></div>
+    ${rows}
+  </div>`;
+}
 function renderToday(){
+  /* 快速记录条状态 */
+  const td=todayStr();
+  const todayRec=DB.weights.find(x=>x.date===td);
+  const qi=$("tq_w"),qb=$("tq_btn"),qn=$("tq_note");
+  if(qi&&document.activeElement!==qi)qi.value=todayRec?todayRec.weight:"";
+  if(qb)qb.textContent=todayRec?"改":"保存";
+  if(qn)qn.innerHTML=todayRec?'<div class="qdone">今天已记 '+todayRec.weight+'kg，改完点「改」覆盖</div>':"";
   const last=DB.weights[DB.weights.length-1];
   const cur=last?last.weight:DB.profile.weightStart;
   const remain=(cur-DB.profile.weightGoal);
   $("t_remain").textContent=remain>0?remain.toFixed(1):"0.0";
   const start=DB.profile.weightStart, goal=DB.profile.weightGoal;
   const total=start-goal, done=start-cur;
-  $("t_progress").textContent="已减 "+done.toFixed(1)+"kg / 共 "+total.toFixed(1)+"kg（"+(total>0?(done/total*100).toFixed(0):0)+"%）";
-  const d=DB.diets[todayStr()]||{meals:[]};
+  const pctTotal=total>0?Math.min(100,Math.max(0,done/total*100)):0;
+  $("t_progress").innerHTML=`<div class="muted topg">已减 ${done.toFixed(1)}kg / 共 ${total.toFixed(1)}kg（${(total>0?(done/total*100):0).toFixed(0)}%）</div>
+    <div class="bar mt-6"><i style="width:${pctTotal}%"></i></div>
+    <div class="tstats">
+      <div class="tstat"><div class="v">${cur.toFixed(1)}</div><div class="k">当前 <span class="u">kg</span></div></div>
+      <div class="tstat"><div class="v">${goal}</div><div class="k">目标 <span class="u">kg</span></div></div>
+      <div class="tstat"><div class="v">${DB.trainings.filter(x=>x.date===td).length}</div><div class="k">今日训练</div></div>
+    </div>`;
+  const d=DB.diets[td]||{meals:[]};
   let k=0,p=0,f=0,c=0;d.meals.forEach(m=>{k+=m.kcal||0;p+=m.p||0;f+=m.f||0;c+=m.c||0;});
-  const t=DB.targets;
-  const bar=(val,tg,cls,unit)=>{const pct=Math.min(100,val/tg*100);return `<div class="bar ${cls}"><i style="width:${pct}%"></i></div><div class="metric"><span>${val.toFixed(0)} ${unit}</span><span>目标 ${tg}${unit} · ${pct.toFixed(0)}%</span></div>`;};
-  $("t_diet").innerHTML=`<div class="muted">热量</div>${bar(k,t.calories,"","kcal")}
-    <div class="muted" style="margin-top:6px">蛋白质</div>${bar(p,t.protein,"p","g")}
-    <div class="muted" style="margin-top:6px">脂肪</div>${bar(f,t.fat,"f","g")}
-    <div class="muted" style="margin-top:6px">碳水</div>${bar(c,t.carbs,"c","g")}`;
-  const tr=DB.trainings.filter(x=>x.date===todayStr());
-  if(tr.length){const x=tr[tr.length-1];const done=x.items.filter(i=>i.done).length;$("t_train").innerHTML=`<div class="muted">${x.template||"训练"} · 已完成 ${done}/${x.items.length} 个动作 · RPE ${x.rpe||"-"}</div><div style="margin-top:6px">${x.items.map(i=>`<span class="bd">${i.done?"✓ ":"○ "}${esc(i.name)}</span>`).join("")}</div>`;}
-  else $("t_train").innerHTML='<div class="empty">今天还没训练打卡 →</div>';
+  $("t_diet").innerHTML=metricCards(k,p,f,c);
+  const tr=DB.trainings.filter(x=>x.date===td);
+  if(tr.length){const x=tr[tr.length-1];const dn=x.items.filter(i=>i.done).length;$("t_train").innerHTML=`<div class="muted">${esc(x.template||"训练")} · 已完成 ${dn}/${x.items.length} 个动作 · RPE ${esc(x.rpe||"-")}</div><div class="mt-8">${x.items.map(i=>`<span class="bd">${i.done?"✓ ":"○ "}${esc(i.name)}</span>`).join("")}</div>`;}
+  else $("t_train").innerHTML='<div class="empty">今天还没训练打卡</div>';
 }
-function quickWeight(){$("nav").querySelector('[data-p=weight]').click();}
+/* 今日页快速记录：复用按日期覆盖的保存逻辑 */
+function quickSaveWeight(){
+  const v=parseFloat($("tq_w").value);
+  if(!v){alert("请填写体重");return;}
+  $("w_w").value=v;
+  saveWeight();
+  $("tq_w").value=DB.weights.find(x=>x.date===todayStr()).weight;
+}
+function quickWeight(){showPage("weight");}
 
 /* ---------- 体重 ---------- */
+const W_SHOW=5;              // 历史默认展开条数
+let wExpanded=false;         // 是否已展开全部
 function renderWeight(){
   $("w_date").value=todayStr();
-  let rows=DB.weights.slice().reverse().map(w=>`<div class="hist"><span class="hbody"><b>${w.date}</b> ｜ 体重 ${w.weight}kg${w.waist?" ｜ 腰 "+w.waist+"cm":""}${w.hip?" ｜ 臀 "+w.hip+"cm":""}${w.note?" ｜ "+esc(w.note):""}</span><button class="delete" onclick="delWeight('${w.date}')">删除</button></div>`).join("");
-  $("w_list").innerHTML=rows||'<div class="empty">还没有记录</div>';
+  const all=DB.weights.slice().reverse();
+  const shown=wExpanded?all:all.slice(0,W_SHOW);
+  let rows=shown.map(w=>`<div class="hist"><span class="hbody"><b>${w.date}</b> ｜ 体重 ${w.weight}kg${w.waist?" ｜ 腰 "+w.waist+"cm":""}${w.hip?" ｜ 臀 "+w.hip+"cm":""}${w.note?" ｜ "+esc(w.note):""}</span><button class="delete" onclick="delWeight('${w.date}')">删除</button></div>`).join("");
+  let more="";
+  if(all.length>W_SHOW){
+    more=`<div class="more-line"><button onclick="toggleWExpanded()">${wExpanded?"收起":"展开全部 "+all.length+" 条"}</button></div>`;
+  }
+  $("w_list").innerHTML=(rows||'<div class="empty">还没有记录</div>')+more;
   drawWeight();
   renderPhoto();
   recoTip();
 }
+function toggleWExpanded(){wExpanded=!wExpanded;renderWeight();}
 function saveWeight(){
   const date=$("w_date").value||todayStr();
   const w=parseFloat($("w_w").value);if(!w){alert("请填写体重");return;}
@@ -652,7 +1291,7 @@ function renderTrash(){$("bd_date").value=$("bd_date").value||todayStr();const L
 function delWeight(date){if(!confirm("删除 "+date+" 的体重记录？可到「回收站」恢复"))return;const it=DB.weights.find(x=>x.date===date);if(!it)return;trashPush("weight",it);DB.weights=DB.weights.filter(x=>x.date!==date);save();renderWeight();renderToday();renderProgress();}
 function drawWeight(){
   const cv=$("cw");const ws=DB.weights;if(!ws.length){ctxClear(cv,"暂无数据");return;}
-  const vals=ws.map(w=>w.weight);drawLine(cv,ws.map(w=>w.date),vals,"#3a7d6e","体重(kg)");
+  const vals=ws.map(w=>w.weight);drawLine(cv,ws.map(w=>w.date),vals,cssVar("--brand",CHART_C.line),"体重(kg)");
 }
 /* TDEE 提示条 */
 function recoTip(){
@@ -661,12 +1300,12 @@ function recoTip(){
   const bmr=calcBMR(w),tdee=calcTDEE(bmr),ri=recoIntake(tdee);
   $("w_tip").innerHTML=`<div class="tip">当前 ${w}kg ｜ BMR≈<b>${bmr}</b> kcal ｜ TDEE(系数${DB.activity})≈<b>${tdee}</b> kcal<br>建议摄入 ≈ <b>${ri.cal} kcal</b> ｜ 蛋白 ≈ <b>${ri.pro} g</b>（缺口约450）。 <button class="act2" onclick="applyIntake(${ri.cal},${ri.pro})">应用到目标</button></div>`;
 }
-function applyIntake(cal,pro){DB.targets.calories=cal;DB.targets.protein=pro;save();renderToday();renderData();if($("w_tip"))$("w_tip").innerHTML+='<div class="muted" style="margin-top:6px">✓ 已更新今日目标</div>';}
+function applyIntake(cal,pro){DB.targets.calories=cal;DB.targets.protein=pro;save();renderToday();renderData();if($("w_tip"))$("w_tip").innerHTML+='<div class="muted mt-6">✓ 已更新今日目标</div>';}
 
 /* ---------- 照片 ---------- */
 function renderPhoto(){
   const box=$("ph_list");
-  if(!DB.photos.length){box.innerHTML='<div class="empty" style="width:100%">还没有照片，点上方按钮上传</div>';return;}
+  if(!DB.photos.length){box.innerHTML='<div class="empty wfull">还没有照片，点上方按钮上传</div>';return;}
   box.innerHTML=DB.photos.slice().reverse().map((p,i)=>`<img src="${p.data}" alt="${p.date}" title="${p.date}" onclick="viewPhoto('${p.data}')">`).join("");
 }
 function addPhoto(inp){
@@ -699,25 +1338,73 @@ function renderTrain(){
     const names=Object.keys(PLAN.templateGroups[cat]).filter(n=>DB.templates[n]);
     if(!names.length)return;
     html+=`<optgroup label="${esc(cat)}">`+names.map(n=>{
-      const st=PLAN.templateGroups[cat][n].stage;
       known[n]=1;
-      return `<option value="${esc(n)}">${esc(n)}（${st}）</option>`;}).join("")+`</optgroup>`;
+      return `<option value="${esc(n)}">${esc(optionLabel(n))}</option>`;}).join("")+`</optgroup>`;
   });
   // 自定义模板（用户编辑/新增、不在默认分组里的）
   const custom=Object.keys(DB.templates).filter(n=>!known[n]);
-  if(custom.length)html+=`<optgroup label="自定义">`+custom.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")+`</optgroup>`;
+  if(custom.length)html+=`<optgroup label="自定义">`+custom.map(n=>`<option value="${esc(n)}">${esc(optionLabel(n))}</option>`).join("")+`</optgroup>`;
   sel.innerHTML=html;
   if(prev&&DB.templates[prev])sel.value=prev; // 保存/刷新后保持当前选择
+  /* 选项的显示文本与 value 不同（多了图标与阶段），设置 value 后不能靠 DOM 推断。
+     必须把当前模板的阶段图标同步到「编辑此模板」按钮上的 chip，否则用户在
+     展开编辑面板前看不出当前模板属于哪个阶段。 */
+  const chip=$("tpl_stage_chip");
+  if(chip)chip.textContent=sel.value?stageIcon(sel.value):"";
+  renderStageLegend();
   loadTemplate();
-  let h=DB.trainings.map((x,idx)=>{const dn=x.items.filter(i=>i.done).length;return `<div class="hist"><span class="hbody"><b>${x.date}</b> ｜ ${esc(x.template||"训练")} ｜ 完成 ${dn}/${x.items.length}${x.rpe?" ｜ RPE "+x.rpe:""}${x.note?" ｜ "+esc(x.note):""}</span><button class="delete" onclick="delTrain(${idx})">删除</button> <button class="ghost" onclick="editTraining(${idx})" style="font-size:12px;padding:4px 10px">编辑</button></div>`;}).reverse().join("");
+  let h=DB.trainings.map((x,idx)=>{const dn=x.items.filter(i=>i.done).length;return `<div class="hist"><span class="hbody"><b>${x.date}</b> ｜ ${esc(x.template||"训练")} ｜ 完成 ${dn}/${x.items.length}${x.rpe?" ｜ RPE "+x.rpe:""}${x.note?" ｜ "+esc(x.note):""}</span><button class="delete" onclick="delTrain(${idx})">删除</button> <button class="ghost btn-sm" onclick="editTraining(${idx})">编辑</button></div>`;}).reverse().join("");
   $("t_hist").innerHTML=h||'<div class="empty">还没有训练记录</div>';
 }
 function delTrain(idx){if(!confirm("删除这条训练记录？可到「回收站」恢复"))return;const it=DB.trainings[idx];if(!it)return;trashPush("train",it);DB.trainings.splice(idx,1);save();renderTrain();renderToday();renderProgress();}
-function editTraining(idx){const rec=DB.trainings[idx];if(!rec)return;$("he_idx").value=idx;$("he_title").textContent=rec.date+" · "+(rec.template||"训练");$("he_items").innerHTML=rec.items.map((it,i)=>`<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(it.name)}</span><label style="margin:0;display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" class="chk" data-k="done" ${it.done?"checked":""}>完成</label><button class="delete" onclick="delHistItem(${i})">移除</button></div><div class="row"><input class="mini" placeholder="组" data-k="sets" value="${esc(it.sets)}"><input class="mini" placeholder="次" data-k="reps" value="${esc(it.reps)}"><input class="mini" placeholder="kg" data-k="weight" value="${esc(it.weight)}"></div></div>`).join("");const acts=allActions();$("he_add").innerHTML='<option value="">+ 添加动作...</option>'+acts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");$("hist_edit").style.display="block";$("hist_edit").scrollIntoView({behavior:"smooth"});}
+function editTraining(idx){const rec=DB.trainings[idx];if(!rec)return;$("he_idx").value=idx;$("he_title").textContent=rec.date+" · "+(rec.template||"训练");$("he_items").innerHTML=rec.items.map((it,i)=>`<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(it.name)}</span><label class="chkline"><input type="checkbox" class="chk" data-k="done" ${it.done?"checked":""}>完成</label><button class="delete" onclick="delHistItem(${i})">移除</button></div><div class="row"><input class="mini" placeholder="组" data-k="sets" value="${esc(it.sets)}"><input class="mini" placeholder="次" data-k="reps" value="${esc(it.reps)}"><input class="mini" placeholder="kg" data-k="weight" value="${esc(it.weight)}"></div></div>`).join("");const acts=allActions();$("he_add").innerHTML='<option value="">+ 添加动作...</option>'+acts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("");$("hist_edit").style.display="block";$("hist_edit").scrollIntoView({behavior:"smooth"});}
 function delHistItem(i){const idx=+$("he_idx").value;DB.trainings[idx].items.splice(i,1);editTraining(idx);}
 function addHistItem(){const id=$("he_add").value;if(!id)return;const a=getAct(id);if(!a)return;const idx=+$("he_idx").value;DB.trainings[idx].items.push({actionId:a.id,name:a.name,done:false,sets:"",reps:"",weight:""});$("he_add").value="";editTraining(idx);}
 function saveHistEdit(){const idx=+$("he_idx").value;const items=[...$("he_items").querySelectorAll(".item")].map(el=>{const i=+el.dataset.i;const it=DB.trainings[idx].items[i];return {actionId:it?it.actionId:"",name:it?it.name:el.querySelector('.nm').textContent,done:el.querySelector('[data-k=done]').checked,sets:el.querySelector('[data-k=sets]').value||"",reps:el.querySelector('[data-k=reps]').value||"",weight:el.querySelector('[data-k=weight]').value||""};});DB.trainings[idx].items=items;save();$("hist_edit").style.display="none";renderTrain();renderToday();}
-function stageClass(s){return s==='进阶'?'st-adv':s==='待解锁'?'st-lock':'st-base';}
+/* ---------- 阶段标识 ----------
+   历史沿革：最初是 <select> 旁边一个独立 <span> 徽章（与下拉框不同行）；
+   接着拼进选项文本「模板名［阶段］」；再改成「图标 + ASCII 标签」；
+   现在是**纯图标、不带任何文字**，如「○ 基础激活日」「● 上肢拉力（进阶）」。
+   图标直接表态、不附文字，所以每个图标必须是白名单里的单字符。 */
+const STAGES=["基础","进阶","待解锁"];
+/* 三个都是 Basic Multilingual Plane 内的单字符：
+   ○ 基础（空心圆＝起点） / ◐ 进阶（半实心＝进行中） / ● 待解锁（实心＝锁定）
+   不用 emoji（🔒 等）是因为它们会走彩色 emoji 字体，与另外两个黑白几何符号
+   字重、基线、宽度都不一致，在同一列里会明显跳。 */
+const STAGE_ICON={"基础":"○","进阶":"◐","待解锁":"●"};
+function stageOf(name){
+  const m=DB.templateMeta&&DB.templateMeta[name];
+  const s=(m&&m.stage)||"基础";
+  return STAGES.indexOf(s)>=0?s:"基础";   // 容错：脏数据一律回落到「基础」
+}
+function stageIcon(name){return STAGE_ICON[stageOf(name)]||"○";}
+/* 下拉框选项文案：纯图标 + 名称，不再带阶段文字 */
+function optionLabel(name){return stageIcon(name)+" "+name;}
+/* 图例：图标替代了文字，必须有一处能查到含义。由 STAGES/STAGE_ICON 自动生成，
+   加阶段时不会忘记同步；只列出当前确实存在的阶段，避免出现用不上的图例。 */
+function renderStageLegend(){
+  const box=$("stage_legend");if(!box)return;
+  const used={};
+  Object.keys(DB.templates||{}).forEach(n=>{used[stageOf(n)]=1;});
+  box.innerHTML=STAGES.filter(s=>used[s]).map(s=>
+    `<span class="lg"><i>${STAGE_ICON[s]}</i>${esc(s)}</span>`).join("");
+}
+/* 编辑面板里的分段选择器：把当前阶段点亮 */
+function renderStageSeg(){
+  const box=$("ed_stage_seg");if(!box)return;
+  const cur=$("ed_stage")?$("ed_stage").value:"";
+  const btns=box.querySelectorAll?box.querySelectorAll("button"):[];
+  for(let i=0;i<btns.length;i++){
+    const b=btns[i];
+    if(b.classList&&b.classList.toggle)b.classList.toggle("on",b.dataset&&b.dataset.st===cur);
+  }
+}
+/* 选阶段：写隐藏域 + 立即写入 DB（用户点「保存模板」后落盘） */
+function pickStage(st){
+  const el=$("ed_stage");
+  if(el)el.value=st||"基础";
+  renderStageSeg();
+}
 function lastLoadRec(id){
   for(let k=DB.trainings.length-1;k>=0;k--){
     const it=DB.trainings[k].items.find(x=>x.actionId===id && (x.sets||x.reps||x.weight));
@@ -744,18 +1431,17 @@ function renderProgressCard(){
     DB.trainings.forEach(t=>{const it=t.items.find(x=>x.actionId===id&&(x.sets||x.reps||x.weight));if(it)recs.push({date:t.date,s:it.sets,r:it.reps,w:it.weight});});
     if(!recs.length)return `<div class="pr"><span class="nm">${esc(a.name)}</span><span class="muted">暂无记录</span></div>`;
     const trend=recs.slice(-3).map(r=>`${r.date.slice(5)} ${r.s||'-'}×${r.r||'-'}${r.w?' @'+r.w+'kg':''}`).join(' → ');
-    return `<div class="pr"><span class="nm">${esc(a.name)}</span><span class="muted" style="font-size:11.5px">${esc(trend)}</span></div>`;
+    return `<div class="pr"><span class="nm">${esc(a.name)}</span><span class="muted hint-t">${esc(trend)}</span></div>`;
   }).join("");
 }
 function loadTemplate(){
   hideEdit();
   const name=$("tpl_sel").value;const ids=DB.templates[name]||[];
-  const meta=(DB.templateMeta&&DB.templateMeta[name])||{stage:"基础"};
-  $("tpl_stage").innerHTML=`<span class="stage ${stageClass(meta.stage)}">${meta.stage}</span>`;
+  /* 阶段徽章已并入下拉框选项文本，此处不再单独渲染 */
   $("tpl_items").innerHTML=ids.map((id,i)=>{const a=getAct(id);if(!a)return"";
     const last=lastLoadRec(id);
     const lastHtml=last?`<div class="lastload">上次：${last.date.slice(5)} ${last.s||'-'}×${last.r||'-'}${last.w?' @'+last.w+'kg':''}${loadHint(id)}</div>`:'';
-    return `<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(a.name)}</span><label style="margin:0;display:flex;align-items:center;gap:6px;color:var(--ink);font-size:12px">完成<input type="checkbox" class="chk" data-k="done"></label></div><div class="muted" style="font-size:11.5px;margin:3px 0">${esc(a.how)}</div>${lastHtml}<div class="row"><input class="mini" placeholder="组" data-k="sets"><input class="mini" placeholder="次" data-k="reps"><input class="mini" placeholder="kg" data-k="weight"></div></div>`;
+    return `<div class="item" data-i="${i}"><div class="top"><span class="nm">${esc(a.name)}</span><label class="chkline chk-sm">完成<input type="checkbox" class="chk" data-k="done"></label></div><div class="muted hint-t">${esc(a.how)}</div>${lastHtml}<div class="row"><input class="mini" placeholder="组" data-k="sets"><input class="mini" placeholder="次" data-k="reps"><input class="mini" placeholder="kg" data-k="weight"></div></div>`;
   }).join("");
   renderProgressCard();
 }
@@ -770,11 +1456,11 @@ function saveTraining(){
   $("t_rpe").value="";$("t_note").value="";renderTrain();renderToday();
 }
 /* 模板编辑 */
-function showEdit(){const name=$("tpl_sel").value;$("ed_name").textContent=name;editingIds=(DB.templates[name]||[]).slice();renderEditList();$("tpl_edit").style.display="block";$("tpl_edit").scrollIntoView({behavior:"smooth"});}
+function showEdit(){const name=$("tpl_sel").value;$("ed_name").textContent=name;editingIds=(DB.templates[name]||[]).slice();const se=$("ed_stage");if(se)se.value=stageOf(name);renderStageSeg();renderEditList();$("tpl_edit").style.display="block";$("tpl_edit").scrollIntoView({behavior:"smooth"});}
 function hideEdit(){$("tpl_edit").style.display="none";editingIds=null;}
 function renderEditList(){
   const acts=allActions();
-  $("ed_list").innerHTML=acts.map(a=>{const on=editingIds.includes(a.id);return `<label class="editem"><input type="checkbox" ${on?"checked":""} onchange="toggleEdit('${a.id}',this.checked)"> <span><b>${esc(a.name)}</b><br><span class="muted" style="font-size:11.5px">${esc(a.how)}</span></span></label>`;}).join("");
+  $("ed_list").innerHTML=acts.map(a=>{const on=editingIds.includes(a.id);return `<label class="editem"><input type="checkbox" ${on?"checked":""} onchange="toggleEdit('${a.id}',this.checked)"> <span><b>${esc(a.name)}</b><br><span class="muted hint-t">${esc(a.how)}</span></span></label>`;}).join("");
 }
 function toggleEdit(id,on){if(on){if(!editingIds.includes(id))editingIds.push(id);}else{editingIds=editingIds.filter(x=>x!==id);}}
 function addCustomAction(){
@@ -787,7 +1473,18 @@ function addCustomAction(){
   renderEditList();renderRef();
 }
 function saveTemplate(){
-  const name=$("tpl_sel").value;DB.templates[name]=editingIds.slice();save();hideEdit();loadTemplate();renderTrain();
+  const name=$("tpl_sel").value;DB.templates[name]=editingIds.slice();
+  /* 一并落盘阶段。三处都要写，漏一处就会出现「下拉框图标已变、进度判定没变」的不一致：
+     templateMeta 是渲染图标的数据源，templateGroups 是概览页大类的数据源。 */
+  const st=$("ed_stage")?($("ed_stage").value||"基础"):"基础";
+  if(!DB.templateMeta)DB.templateMeta={};
+  if(!DB.templateMeta[name])DB.templateMeta[name]={cat:"自定义"};
+  DB.templateMeta[name].stage=st;
+  Object.keys(PLAN.templateGroups).forEach(cat=>{
+    const g=PLAN.templateGroups[cat];
+    if(g&&g[name])g[name].stage=st;
+  });
+  save();hideEdit();loadTemplate();renderTrain();
 }
 
 /* ---------- 饮食 ---------- */
@@ -796,15 +1493,14 @@ let curCat="B";
 function renderDiet(){
   $("d_tabs").innerHTML=MEAL_CATS.map(([k,n])=>`<button class="${k===curCat?'on':''}" onclick="switchCat('${k}')">${n}</button>`).join("");
   const list=RECIPES[curCat]||[];
-  $("d_list").innerHTML=list.map(r=>`<div class="item"><div class="top"><span class="nm">${esc(r.name)}</span><button class="act2" onclick="addMeal('${r.id}','${curCat}')">+ 加入</button></div><div class="muted" style="font-size:11.5px">${r.kcal}kcal ｜ 蛋白${r.p}g ｜ 脂肪${r.f}g ｜ 碳水${r.c}g${r.tag?'<span class="tag">'+esc(r.tag)+'</span>':''}</div></div>`).join("");
+  $("d_list").innerHTML=list.map(r=>`<div class="item"><div class="top"><span class="nm">${esc(r.name)}</span><button class="act2" onclick="addMeal('${r.id}','${curCat}')">+ 加入</button></div><div class="muted hint-t">${r.kcal}kcal ｜ 蛋白${r.p}g ｜ 脂肪${r.f}g ｜ 碳水${r.c}g${r.tag?'<span class="tag">'+esc(r.tag)+'</span>':''}</div></div>`).join("");
   renderDietToday();renderAdded();
 }
 function switchCat(k){curCat=k;renderDiet();}
 function addMeal(id,cat){const r=(RECIPES[cat]||[]).find(x=>x.id===id);if(!r)return;const dt=todayStr();if(!DB.diets[dt])DB.diets[dt]={meals:[]};DB.diets[dt].meals.push({type:cat,name:r.name,kcal:r.kcal,p:r.p,f:r.f,c:r.c});save();renderAdded();renderDietToday();renderToday();}
 function renderDietToday(){
-  const d=DB.diets[todayStr()]||{meals:[]};let k=0,p=0,f=0,c=0;d.meals.forEach(m=>{k+=m.kcal||0;p+=m.p||0;f+=m.f||0;c+=m.c||0;});const t=DB.targets;
-  const bar=(val,tg,cls,u)=>{const pct=Math.min(100,val/tg*100);return `<div class="bar ${cls}"><i style="width:${pct}%"></i></div><div class="metric"><span>${val.toFixed(0)} ${u}</span><span>目标 ${tg}${u} · ${pct.toFixed(0)}%</span></div>`;};
-  $("d_today").innerHTML=`<div class="muted">热量</div>${bar(k,t.calories,"","kcal")}<div class="muted" style="margin-top:6px">蛋白质</div>${bar(p,t.protein,"p","g")}<div class="muted" style="margin-top:6px">脂肪</div>${bar(f,t.fat,"f","g")}<div class="muted" style="margin-top:6px">碳水</div>${bar(c,t.carbs,"c","g")}`;
+  const d=DB.diets[todayStr()]||{meals:[]};let k=0,p=0,f=0,c=0;d.meals.forEach(m=>{k+=m.kcal||0;p+=m.p||0;f+=m.f||0;c+=m.c||0;});
+  $("d_today").innerHTML=metricCards(k,p,f,c);
 }
 function renderAdded(){
   const d=DB.diets[todayStr()]||{meals:[]};
@@ -827,23 +1523,36 @@ function manualMeal(){
 /* ---------- 进度 ---------- */
 function renderProgress(){
   const ws=DB.weights;
-  if(ws.length){drawLine($("cp_w"),ws.map(w=>w.date),ws.map(w=>w.weight),"#3a7d6e","体重(kg)");
-    const wa=ws.filter(w=>w.waist);if(wa.length)drawLine($("cp_wa"),wa.map(w=>w.date),wa.map(w=>w.waist),"#e08a5b","腰围(cm)");else ctxClear($("cp_wa"),"暂无腰围数据");}
+  if(ws.length){drawLine($("cp_w"),ws.map(w=>w.date),ws.map(w=>w.weight),cssVar("--brand",CHART_C.line),"体重(kg)");
+    const wa=ws.filter(w=>w.waist);if(wa.length)drawLine($("cp_wa"),wa.map(w=>w.date),wa.map(w=>w.waist),cssVar("--brand-2",CHART_C.accent),"腰围(cm)");else ctxClear($("cp_wa"),"暂无腰围数据");}
   else {ctxClear($("cp_w"),"暂无数据");ctxClear($("cp_wa"),"暂无数据");}
   if(DB.photos.length>=2){
     const first=DB.photos[0],last=DB.photos[DB.photos.length-1];
-    $("cmp_row").innerHTML=`<div style="flex:1"><div class="muted center">${first.date}</div><img src="${first.data}" style="width:100%;border-radius:8px;border:1px solid var(--line)"></div><div style="flex:1"><div class="muted center">${last.date}</div><img src="${last.data}" style="width:100%;border-radius:8px;border:1px solid var(--line)"></div>`;
+    $("cmp_row").innerHTML=`<div class="cmpcol"><div class="muted center">${first.date}</div><img class="cmpimg" src="${first.data}"></div><div class="cmpcol"><div class="muted center">${last.date}</div><img class="cmpimg" src="${last.data}"></div>`;
     $("ph_thumbs").innerHTML=DB.photos.map(p=>`<img src="${p.data}" onclick="viewPhoto('${p.data}')">`).join("");
     $("cmp_empty").style.display="none";$("cmp_row").style.display="flex";$("ph_thumbs").style.display="flex";
   } else {$("cmp_row").style.display="none";$("ph_thumbs").style.display="none";$("cmp_empty").style.display="block";}
   const days=[];for(let i=0;i<28;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(todayStr(d));}
   const trdays=new Set(DB.trainings.map(x=>x.date));
   const done=days.filter(d=>trdays.has(d)).length;
-  $("p_rate").innerHTML=`近 28 天训练打卡 <b style="color:var(--brand)">${done}</b> / 28 天（${(done/28*100).toFixed(0)}%）<br><span class="muted">建议每周训练 3-4 天，达标率约 50%+</span>`;
+  $("p_rate").innerHTML=`近 28 天训练打卡 <b class="c-brand">${done}</b> / 28 天（${(done/28*100).toFixed(0)}%）
+    <div class="bar mt-6"><i style="width:${(done/28*100).toFixed(0)}%"></i></div>
+    <span class="muted">建议每周训练 3-4 天，达标率约 50%+</span>`;
 }
 
 /* ---------- 图表 ---------- */
-function ctxClear(cv,msg){const x=cv.getContext("2d");if(!x)return;x.clearRect(0,0,cv.width,cv.height);x.fillStyle="#6b6b6b";x.font="13px sans-serif";x.fillText(msg,20,40);}
+/* canvas 里没法直接写 var(--x)，所以把 CSS 令牌读出来用。
+   这样换主题时图表跟着走，不会出现「页面变蓝、折线还是旧的绿」。
+   兜底值只在取不到令牌时生效（例如无 DOM 的测试环境）。 */
+const CHART_C={grid:"#e3e6eb",label:"#79818b",line:"#2a62c4",accent:"#d9560f"};
+function cssVar(name,fallback){
+  try{
+    if(typeof getComputedStyle!=="function")return fallback;
+    const v=getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v||fallback;
+  }catch(e){return fallback;}
+}
+function ctxClear(cv,msg){const x=cv.getContext("2d");if(!x)return;x.clearRect(0,0,cv.width,cv.height);x.fillStyle=cssVar("--muted",CHART_C.label);x.font="13px sans-serif";x.fillText(msg,20,40);}
 function drawLine(cv,labels,vals,color,unit){
   const x=cv.getContext("2d");if(!x)return;x.clearRect(0,0,cv.width,cv.height);
   if(!vals.length){ctxClear(cv,"暂无数据");return;}
@@ -852,21 +1561,25 @@ function drawLine(cv,labels,vals,color,unit){
   const lo=min-span*0.15,hi=max+span*0.15;
   const X=i=>pl+(W-pl-pr)*(vals.length===1?0.5:i/(vals.length-1));
   const Y=v=>pt+(H-pt-pb)*(1-(v-lo)/(hi-lo));
-  x.strokeStyle="#e4e0d8";x.lineWidth=1;
+  x.strokeStyle=cssVar("--line",CHART_C.grid);x.lineWidth=1;
   for(let g=0;g<=4;g++){const yy=pt+(H-pt-pb)*g/4;x.beginPath();x.moveTo(pl,yy);x.lineTo(W-pr,yy);x.stroke();
-    x.fillStyle="#9a9a9a";x.font="10px sans-serif";x.fillText((hi-(hi-lo)*g/4).toFixed(1),4,yy+3);}
+    x.fillStyle=cssVar("--muted",CHART_C.label);x.font="10px sans-serif";x.fillText((hi-(hi-lo)*g/4).toFixed(1),4,yy+3);}
   x.strokeStyle=color;x.lineWidth=2;x.beginPath();vals.forEach((v,i)=>{const px=X(i),py=Y(v);i?x.lineTo(px,py):x.moveTo(px,py);});x.stroke();
   x.fillStyle=color;vals.forEach((v,i)=>{x.beginPath();x.arc(X(i),Y(v),3,0,7);x.fill();});
-  x.fillStyle="#9a9a9a";x.font="10px sans-serif";
+  x.fillStyle=cssVar("--muted",CHART_C.label);x.font="10px sans-serif";
   const step=Math.ceil(vals.length/6);
   labels.forEach((l,i)=>{if(i%step===0||i===labels.length-1)x.fillText(l.slice(5),X(i)-12,H-10);});
 }
 
 /* ---------- 参考 ---------- */
 function renderRef(){
-  $("r_phases").innerHTML=PLAN.phases.map(p=>`<div class="item"><div class="top"><span class="nm">${esc(p.n)}</span><span class="bd">${esc(p.w)}</span></div><div class="muted" style="font-size:12.5px;margin-top:3px">${esc(p.d)}</div></div>`).join("");
+  if($("r_weeks"))$("r_weeks").innerHTML=THIN_WEEKS.map(w=>`<div class="item"><div class="top"><span class="nm">${esc(w.n)}</span><span class="bd">${esc(w.s)}</span></div><div class="muted hint-t">${esc(w.d)}</div><div class="wkflow">${w.p.map((x,i)=>`<span class="wkc${x==='A'?' wa':' wb'}">${x}</span>${i<w.p.length-1?'<span class="wkar">→</span>':''}`).join("")}<span class="wkar">⟳</span></div></div>`).join("");
+  if($("r_patterns"))$("r_patterns").innerHTML=THIN_PATTERNS.map(p=>`<div class="item"><div class="top"><span class="nm">${esc(p.n)}</span></div><div class="muted hint-t">${esc(p.d)}</div><div class="pacts">${p.a.map(id=>{const a=getAct(id);return a?`<span class="pact">${esc(a.name)}</span>`:'';}).join("")}</div></div>`).join("");
+  if($("r_loads"))$("r_loads").innerHTML=THIN_LOADS.map(l=>`<div class="pr"><span class="nm">${esc(l.n)}</span><span class="muted">${esc(l.d)}</span></div>`).join("");
+  if($("r_progressive"))$("r_progressive").innerHTML=`<ol class="l"><li>每次练完记下动作、组数、次数、重量（手机记事本就行，本应用「训练」页可直接录入并自动显示上次记录）。</li><li>下一次同样的动作和重量，争取<b>多做一个</b>。</li><li>当这个重量能轻松完成 <b>15-20 次</b>，再加重量。</li><li>只有渐进超负荷——一点一点给更多刺激——肌肉才会增长。每天用一样的重量，效果会不好。</li></ol>`;
+  $("r_phases").innerHTML=PLAN.phases.map(p=>`<div class="item"><div class="top"><span class="nm">${esc(p.n)}</span><span class="bd">${esc(p.w)}</span></div><div class="muted hint-t">${esc(p.d)}</div></div>`).join("");
   const acts=allActions();
-  $("r_actions").innerHTML=acts.map(a=>`<div class="item"><div class="top"><span class="nm">${esc(a.name)}</span></div><div class="muted" style="font-size:12px">${esc(a.how)}</div></div>`).join("");
+  $("r_actions").innerHTML=acts.map(a=>{const nt=THIN_NOTES[a.id];return `<div class="item"><div class="top"><span class="nm">${esc(a.name)}</span></div><div class="muted note-in">${esc(a.how)}</div>${nt?`<div class="tnote">★ ${esc(nt)}</div>`:''}</div>`;}).join("");
 }
 
 /* ---------- 数据 ---------- */
@@ -876,6 +1589,21 @@ function renderData(){
   $("act_sel").value=String(DB.activity);
   renderTDEE();
 }
+/* ---------- 更多 ---------- */
+/* 「更多」页本身不含业务数据，只做两件事：列出低频入口 + 显示本机数据量。
+   数据量与「数据同步」页同源，不用跳过去也能确认记录还在。 */
+function renderMore(){
+  const el=$("more_stats");
+  if(!el)return;
+  const rows=[
+    [DB.weights.length,"体重记录","条"],
+    [DB.trainings.length,"训练","次"],
+    [Object.keys(DB.diets).length,"饮食日志","天"],
+    [DB.photos.length,"体型照片","张"],
+    [DB.customActions.length,"自定义动作","个"]
+  ];
+  el.innerHTML=rows.map(r=>`<span>${r[1]} <b>${r[0]}</b> ${r[2]}</span>`).join("");
+}
 function setActivity(){DB.activity=parseFloat($("act_sel").value);save();renderTDEE();}
 function renderTDEE(){
   const w=DB.weights.length?DB.weights[DB.weights.length-1].weight:DB.profile.weightStart;
@@ -883,31 +1611,67 @@ function renderTDEE(){
   $("tdee_box").innerHTML=`<div class="muted">按最新体重 ${w}kg 计算：</div>
     <div class="metric"><span>BMR（基础代谢）</span><b>${bmr} kcal</b></div>
     <div class="metric"><span>TDEE（活动系数 ${DB.activity}）</span><b>${tdee} kcal</b></div>
-    <div class="metric"><span>建议摄入（缺口≈450）</span><b style="color:var(--brand2)">${ri.cal} kcal</b></div>
+    <div class="metric"><span>建议摄入（缺口≈450）</span><b class="c-brand2">${ri.cal} kcal</b></div>
     <div class="metric"><span>建议蛋白（≈2.0g/kg）</span><b>${ri.pro} g</b></div>
-    <div style="margin-top:8px"><button class="act2" onclick="applyIntake(${ri.cal},${ri.pro})">应用为今日目标</button>
+    <div class="mt-8"><button class="act2" onclick="applyIntake(${ri.cal},${ri.pro})">应用为今日目标</button>
     <span class="muted">（当前目标 ${DB.targets.calories}kcal / 蛋白 ${DB.targets.protein}g）</span></div>`;
 }
 function exportData(){const blob=new Blob([JSON.stringify(ROOT,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="fitlog_data_"+todayStr()+".json";a.click();$("d_msg").textContent="已导出全部档案，把文件存到云盘/微信即可在别处导入。";}
-function importData(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!d.profiles){alert("文件格式错误（需包含 profiles）");return;}if(!confirm("导入将覆盖本机现有数据（全部档案），确定继续？"))return;Object.values(d.profiles).forEach(p=>{p.data=mergeData(p.data);});if(!d.profiles[d.active])d.active=Object.keys(d.profiles)[0];ROOT=d;DB=ROOT.profiles[ROOT.active].data;save();$("d_msg").textContent="导入成功！";renderAll();}catch(e){alert("文件格式错误");}};rd.readAsText(f);inp.value="";}
+function importData(inp){const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!d.profiles){alert("文件格式错误（需包含 profiles）");return;}if(!confirm("导入将覆盖本机现有数据（全部档案），确定继续？"))return;Object.values(d.profiles).forEach(p=>{p.data=mergeData(p.data);});if(!d.profiles[d.active])d.active=Object.keys(d.profiles)[0];ROOT=d;ensureAvatars();DB=ROOT.profiles[ROOT.active].data;save();$("d_msg").textContent="导入成功！";renderAll();}catch(e){alert("文件格式错误");}};rd.readAsText(f);inp.value="";}
 function clearData(){if(confirm("确定清空当前档案「"+ROOT.profiles[ROOT.active].name+"」的全部数据？此操作不可恢复（请先导出备份）。")){ROOT.profiles[ROOT.active].data=freshData();DB=ROOT.profiles[ROOT.active].data;save();renderAll();$("d_msg").textContent="已清空当前档案数据。";}}
 
 /* ---------- 左右滑动切换页面 ---------- */
-const PAGE_ORDER=['today','weight','train','diet','progress','ref','data','profiles','trash'];
-function curPage(){const a=document.querySelector('.page.active');return a?a.id:'today';}
+const PAGE_ORDER=['today','weight','train','diet','progress','more','ref','data','profiles','trash'];function curPage(){const a=document.querySelector('.page.active');return a?a.id:'today';}
 function goSwipe(d){const i=PAGE_ORDER.indexOf(curPage());if(d>0&&i<PAGE_ORDER.length-1)showPage(PAGE_ORDER[i+1],1);else if(d<0&&i>0)showPage(PAGE_ORDER[i-1],-1);}
 let _sx=0,_sy=0,_st=0,_ok=true;
 const NO_SWIPE='nav,.chartbox,.tabs,input,select,textarea,button,a';
 document.addEventListener('touchstart',e=>{const t=e.touches[0];_sx=t.clientX;_sy=t.clientY;_st=Date.now();_ok=!e.target.closest(NO_SWIPE);},{passive:true});
 document.addEventListener('touchend',e=>{if(!_ok)return;const t=e.changedTouches[0];const dx=t.clientX-_sx,dy=t.clientY-_sy;if(Date.now()-_st>900)return;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.6)goSwipe(dx<0?1:-1);},{passive:true});
-document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;if(e.key==='ArrowRight')goSwipe(1);else if(e.key==='ArrowLeft')goSwipe(-1);});
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea'))return;
+  if(e.key==='ArrowRight')goSwipe(1);else if(e.key==='ArrowLeft')goSwipe(-1);
+});
+/* 「更多」是一个普通页面而不是浮层，所以不存在「点外部 / 按 Esc 收起」这回事：
+   离开它的方式就是点别的 tab，或左右滑动切页。 */
+
+/* ---------- 返回顶部 ---------- */
+/* 阈值取一屏高度：滚过一屏才有「回到顶部」的需求，刚滚动一点就弹按钮会干扰阅读。
+   用 rAF 节流：scroll 事件在高频滚动下可每帧多次触发，直接读 scrollY 会引发
+   布局抖动；这里保证一个渲染帧最多更新一次。 */
+function scrollToTop(){
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+let _topTick=false;
+function updateToTop(){
+  if(_topTick)return;
+  _topTick=true;
+  const run=()=>{
+    _topTick=false;
+    const btn=document.getElementById("toTop");
+    if(!btn)return;
+    const show=window.scrollY>window.innerHeight*0.8;
+    btn.classList.toggle("show",show);
+  };
+  if(window.requestAnimationFrame)window.requestAnimationFrame(run);else run();
+}
+window.addEventListener('scroll',updateToTop,{passive:true});
+/* 切页时页面高度会变，滚动位置也可能被重置，需重新判定按钮显隐 */
+if(typeof showPage==="function"){
+  const _showPageOrig=showPage;
+  showPage=function(p,dir){
+    _showPageOrig(p,dir);
+    updateToTop();
+  };
+}
+/* 视口变化会改变页面高度（横竖屏切换最明显），需重新判定返回顶部的显隐 */
+window.addEventListener('resize',updateToTop);
+window.addEventListener('orientationchange',()=>setTimeout(updateToTop,220));
 
 /* 初始化 */
-window.addEventListener('resize',moveNavSlider);
-window.addEventListener('load',moveNavSlider);
 updateHeader();
-if(!storageOK){const w=document.createElement("div");w.className="warn";w.style.margin="10px 14px";w.textContent="⚠ 当前浏览器禁用了本地存储（常见于 Safari 打开本地文件或隐私/无痕模式），数据将无法保存。建议用 Chrome / Edge 打开本文件，并关闭无痕模式。";document.querySelector("header").after(w);}
+if(!storageOK){const w=document.createElement("div");w.className="warn";w.style.margin="12px 14px";w.textContent="⚠ 当前浏览器禁用了本地存储（常见于 Safari 打开本地文件或隐私/无痕模式），数据将无法保存。建议用 Chrome / Edge 打开本文件，并关闭无痕模式。";document.querySelector("header").after(w);}
 save();
 renderAll();
+updateToTop();
 </script>
 </body></html>

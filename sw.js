@@ -1,4 +1,4 @@
-const VERSION="20260903164500";const CACHE="fitlog-"+VERSION;
+const VERSION="20260920105200";const CACHE="fitlog-"+VERSION;
 const APP_SHELL=["index.html","./","manifest.webmanifest","icon.svg"];
 const OFFLINE_HTML='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>FitLog · 离线</title><style>body{font-family:-apple-system,"PingFang SC",sans-serif;background:#0f1420;color:#e8edf5;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px;text-align:center}div{max-width:340px}.t{font-size:20px;font-weight:700;margin-bottom:12px}.d{font-size:14px;line-height:1.7;color:#9fb0c8}a{color:#5ec8ff}</style></head><body><div><div class="t">📴 当前离线</div><div class="d">你的训练数据都安全地存在本机。<br>连上网后重新打开本应用即可正常使用。<br><br>若此前在线打开过，可尝试先联网一次再离线使用。</div></div></body></html>';
 

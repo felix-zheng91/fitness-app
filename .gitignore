@@ -1,0 +1,13 @@
+# 系统 / 桌面环境
+.Trash-0/
+.DS_Store
+Thumbs.db
+
+# 本地 Agent 工作数据：备份、工作日志、调试产物、回归脚本
+# 这些只在本机有意义，不进版本库
+.workbuddy/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitLog 改版 · 四版设计对比</title>
+<style>
+/* ============================================================
+   这一层是「画廊本身」的样式，与四版方案无关。
+   四版方案真正的样式在下面「主题令牌 + 模拟组件」两节。
+   ============================================================ */
+:root{
+  --g-bg:#EFF1F4; --g-card:#FFFFFF; --g-line:#E1E4E9; --g-line2:#D2D6DD;
+  --g-ink:#15181D; --g-ink2:#474E57; --g-muted:#7B838D; --g-faint:#A5ACB5;
+  --g-acc:#3A6DF0;
+  --g-sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --g-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--g-bg);color:var(--g-ink);
+  font:14px/1.68 var(--g-sans);-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1320px;margin:0 auto;padding:0 22px 90px}
+
+/* ---------- 页头 ---------- */
+.hero{padding:46px 0 26px;max-width:760px}
+.hero .kicker{
+  display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+  color:var(--g-acc);background:#E7EDFE;padding:5px 11px;border-radius:99px;margin-bottom:16px;
+}
+.hero h1{margin:0 0 14px;font-size:33px;line-height:1.24;font-weight:800;letter-spacing:-.025em}
+.hero p{margin:0;color:var(--g-ink2);font-size:15px}
+.hero p+p{margin-top:9px}
+.hero code{
+  font-family:var(--g-mono);font-size:12.5px;background:#E4E7EC;padding:1px 6px;border-radius:5px;
+}
+.hero .note{
+  margin-top:20px;padding:13px 16px;border-radius:12px;background:#FFF9E8;
+  border:1px solid #F2E2B8;color:#6B5217;font-size:13px;
+}
+
+/* ---------- 吸顶选择条 ---------- */
+.bar{
+  position:sticky;top:0;z-index:60;background:rgba(239,241,244,.86);
+  -webkit-backdrop-filter:saturate(1.5) blur(12px);backdrop-filter:saturate(1.5) blur(12px);
+  border-bottom:1px solid var(--g-line);margin:0 -22px 0;padding:11px 22px;
+  display:flex;gap:9px;align-items:center;overflow-x:auto;scrollbar-width:none;
+}
+.bar::-webkit-scrollbar{display:none}
+.bar .lab{font-size:12px;color:var(--g-muted);white-space:nowrap;margin-right:2px}
+.jump{
+  flex:0 0 auto;border:1px solid var(--g-line2);background:var(--g-card);color:var(--g-ink2);
+  font:600 12.5px/1 var(--g-sans);padding:9px 14px;border-radius:99px;cursor:pointer;
+  white-space:nowrap;transition:all .15s;
+}
+.jump:hover{border-color:var(--g-acc);color:var(--g-acc)}
+.jump b{font-weight:800}
+
+/* ---------- 每一版 ---------- */
+.variant{margin-top:64px;scroll-margin-top:74px}
+.v-head{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}
+.v-left{max-width:640px}
+.v-idx{
+  display:inline-flex;align-items:center;gap:9px;font-size:12px;font-weight:700;
+  letter-spacing:.06em;color:var(--g-muted);text-transform:uppercase;
+}
+.v-idx i{
+  display:grid;place-items:center;width:25px;height:25px;border-radius:8px;
+  background:var(--g-ink);color:#fff;font:800 12.5px/1 var(--g-sans);font-style:normal;
+}
+.v-h2{margin:12px 0 8px;font-size:26px;font-weight:800;letter-spacing:-.022em;line-height:1.25}
+.v-desc{margin:0;color:var(--g-ink2);font-size:14.5px}
+.v-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pill{
+  font-size:12px;font-weight:600;padding:5px 11px;border-radius:99px;
+  background:#E4E7EC;color:var(--g-ink2);
+}
+.pill.good{background:#E3F5EC;color:#1E6B47}
+.pill.mid{background:#FFF3DF;color:#8A5A12}
+.pill.risk{background:#FDE8E6;color:#963229}
+
+/* ---------- 令牌色板 ---------- */
+.v-right{min-width:280px}
+.v-right .t{font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--g-muted);margin-bottom:9px}
+.sw{display:flex;gap:9px;flex-wrap:wrap}
+.sw > div{width:62px}
+.sw i{display:block;height:36px;border-radius:9px;border:1px solid rgba(20,22,26,.09)}
+.sw span{display:block;font:10.5px/1.35 var(--g-mono);color:var(--g-muted);margin-top:6px}
+
+/* ---------- 手机排布 ---------- */
+.phones{display:flex;gap:24px;overflow-x:auto;padding:26px 4px 10px;margin:0 -4px;scrollbar-width:thin}
+.phones::-webkit-scrollbar{height:8px}
+.phones::-webkit-scrollbar-track{background:transparent}
+.phones::-webkit-scrollbar-thumb{background:var(--g-line2);border-radius:99px}
+.slot{flex:0 0 auto}
+.slot .cap{
+  text-align:center;font-size:12px;font-weight:700;color:var(--g-muted);
+  margin-top:12px;letter-spacing:.03em;
+}
+
+.frame{
+  width:328px;padding:9px;border-radius:36px;background:#191C21;
+  box-shadow:0 20px 44px rgba(18,20,24,.2),0 2px 6px rgba(18,20,24,.12);
+}
+.screen{
+  height:648px;border-radius:28px;overflow-y:auto;overflow-x:hidden;
+  background:var(--m-bg);color:var(--m-ink);position:relative;
+  font:var(--m-fs)/1.55 var(--g-sans);-webkit-font-smoothing:antialiased;
+  scrollbar-width:none;
+}
+.screen::-webkit-scrollbar{display:none}
+
+/* ---------- 改动清单 ---------- */
+.notes{
+  margin-top:26px;display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  max-width:1000px;
+}
+.nbox{background:var(--g-card);border:1px solid var(--g-line);border-radius:13px;padding:15px 17px}
+.nbox .t{font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--g-muted);margin-bottom:9px}
+.nbox ul{margin:0;padding-left:17px;font-size:13px;color:var(--g-ink2)}
+.nbox li{margin:5px 0}
+.nbox li::marker{color:var(--g-faint)}
+.nbox.risk{border-color:#F1D5D1;background:#FFF7F6}
+.nbox.risk .t{color:#963229}
+
+/* ---------- 选定按钮 ---------- */
+.pickbtn{
+  display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+  background:var(--g-ink);color:#fff;border:none;cursor:pointer;
+  font:700 13.5px/1 var(--g-sans);padding:13px 20px;border-radius:11px;
+  transition:transform .14s,box-shadow .14s;
+}
+.pickbtn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(18,20,24,.2)}
+.pickbtn span{font-size:15px}
+
+/* ---------- 对比表 ---------- */
+.tablewrap{margin-top:28px;overflow-x:auto;background:var(--g-card);border:1px solid var(--g-line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:780px;font-size:13px}
+th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--g-line);vertical-align:top}
+thead th{
+  background:#F7F8FA;font-size:11.5px;font-weight:800;letter-spacing:.05em;
+  color:var(--g-muted);position:sticky;top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody td:first-child{font-weight:700;white-space:nowrap}
+tbody td b{font-weight:800}
+.dot{
+  display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:6px;vertical-align:1px;
+}
+
+/* ---------- 底部说明 ---------- */
+.tail{margin-top:60px;padding-top:28px;border-top:1px solid var(--g-line);max-width:780px}
+.tail h2{font-size:19px;margin:0 0 14px;font-weight:800;letter-spacing:-.015em}
+.tail ol{margin:0;padding-left:20px;color:var(--g-ink2);font-size:14px}
+.tail li{margin:9px 0}
+.tail .fine{margin-top:22px;font-size:12.5px;color:var(--g-muted)}
+
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:34px;transform:translate(-50%,16px);
+  background:#15181D;color:#fff;font:600 13px/1 var(--g-sans);
+  padding:13px 19px;border-radius:11px;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;z-index:200;box-shadow:0 12px 30px rgba(18,20,24,.28);
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ============================================================
+   主题令牌 —— 四版之间的差异，绝大部分就浓缩在这一节。
+   重构时改的就是这里：色板 + 圆角 + 阴影 + 字号 + 少量字体开关。
+   ============================================================ */
+.phone{
+  --m-bg:#fff; --m-bg2:#fafafa; --m-card:#fff; --m-line:#ececec; --m-line2:#e0e0e0;
+  --m-ink:#111; --m-ink2:#444; --m-muted:#888; --m-faint:#b4b4b4;
+  --m-brand:#0f8a6a; --m-accent:#f2711c;
+  --m-ok:#0f8a6a; --m-warn:#d93f2b; --m-amber:#c07a12;
+  --m-r:12px; --m-r-sm:8px; --m-sh:none; --m-fs:13.5px; --m-pad:16px;
+}
+
+/* --- A · 极简数据流 --- */
+[data-v="a"]{
+  --m-bg:#FFFFFF; --m-bg2:#FAFAF8; --m-card:#FFFFFF; --m-line:#EDEDE9; --m-line2:#E1E1DC;
+  --m-ink:#0F1113; --m-ink2:#3C4046; --m-muted:#86898F; --m-faint:#B6B9BF;
+  --m-brand:#0E8A67; --m-accent:#E8631A;
+  --m-ok:#0E8A67; --m-warn:#D2381F; --m-amber:#B26A0C;
+  --m-r:8px; --m-r-sm:6px; --m-sh:none; --m-fs:13.5px; --m-pad:20px;
+}
+
+/* --- B · 深色霓虹 --- */
+[data-v="b"]{
+  --m-bg:#0A0C0F; --m-bg2:#101317; --m-card:#14181D; --m-line:rgba(255,255,255,.075); --m-line2:rgba(255,255,255,.13);
+  --m-ink:#F1F4F7; --m-ink2:#C2C9D1; --m-muted:#858E98; --m-faint:#5C656F;
+  --m-brand:#2FE3AE; --m-accent:#FF7A45;
+  --m-ok:#2FE3AE; --m-warn:#FF5F5F; --m-amber:#FFC53D;
+  --m-r:16px; --m-r-sm:10px;
+  --m-sh:0 0 0 1px rgba(47,227,174,.06),0 10px 26px rgba(0,0,0,.45);
+  --m-fs:13.5px; --m-pad:16px;
+}
+
+/* --- C · 温暖手账 --- */
+[data-v="c"]{
+  --m-bg:#F4EFE6; --m-bg2:#EFE8DC; --m-card:#FFFDF9; --m-line:#E8DFD0; --m-line2:#D9CDBA;
+  --m-ink:#2A2622; --m-ink2:#554D44; --m-muted:#8B8174; --m-faint:#AFA496;
+  --m-brand:#2F6B5A; --m-accent:#CE7346;
+  --m-ok:#2F6B5A; --m-warn:#B84A32; --m-amber:#A8761F;
+  --m-r:20px; --m-r-sm:13px;
+  --m-sh:0 2px 4px rgba(92,74,52,.04),0 12px 26px rgba(92,74,52,.07);
+  --m-fs:14px; --m-pad:16px;
+}
+
+/* --- D · 紧凑控制台 --- */
+[data-v="d"]{
+  --m-bg:#F6F7F9; --m-bg2:#FFFFFF; --m-card:#FFFFFF; --m-line:#E3E6EB; --m-line2:#D2D7DE;
+  --m-ink:#171A1E; --m-ink2:#464D56; --m-muted:#79818B; --m-faint:#A8AFB8;
+  --m-brand:#2A62C4; --m-accent:#D9560F;
+  --m-ok:#1C7A45; --m-warn:#C33B28; --m-amber:#A9690C;
+  --m-r:7px; --m-r-sm:5px; --m-sh:none; --m-fs:12.5px; --m-pad:13px;
+  --m-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+/* ============================================================
+   模拟组件（全部只引用 --m-* 令牌，所以四版共用一套结构）
+   ============================================================ */
+
+/* 状态栏 */
+.sbar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 22px 3px;font-size:11px;font-weight:600;color:var(--m-ink);
+  opacity:.9;letter-spacing:.02em;
+}
+[data-v="b"] .sbar{color:#fff}
+
+/* 顶栏 */
+.mtop{display:flex;justify-content:space-between;align-items:center;padding:9px var(--m-pad) 11px}
+.mbrand{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--m-brand);line-height:1.2}
+.mdate{font-size:11.5px;color:var(--m-muted);margin-top:2px}
+.mava{
+  width:30px;height:30px;border-radius:99px;display:grid;place-items:center;
+  background:var(--m-brand);color:#fff;font-size:12.5px;font-weight:800;
+}
+[data-v="b"] .mava{color:#08110E}
+[data-v="c"] .mava{background:var(--m-accent)}
+
+/* 导航（顶部样式） */
+.mnav{
+  display:flex;padding:0 8px;border-bottom:1px solid var(--m-line);
+  background:var(--m-bg2);position:sticky;top:0;z-index:5;
+}
+.mnav b{
+  flex:1;text-align:center;padding:10px 2px 9px;font-size:12px;font-weight:500;
+  color:var(--m-muted);border-bottom:2px solid transparent;white-space:nowrap;
+}
+.mnav b.on{color:var(--m-brand);font-weight:800;border-bottom-color:var(--m-brand)}
+.mnav b .car{font-size:8px;opacity:.7}
+
+/* 内容与分区 */
+.mbody{padding-bottom:22px}
+.msec{padding:16px var(--m-pad) 0}
+.msec.tight{padding-top:12px}
+.mh{
+  font-size:11.5px;font-weight:800;letter-spacing:.05em;color:var(--m-muted);
+  margin:0 0 9px;display:flex;justify-content:space-between;align-items:baseline;
+}
+.mh em{font-style:normal;font-weight:600;letter-spacing:0;font-size:11.5px;color:var(--m-brand)}
+
+/* 卡片 */
+.mcard{
+  background:var(--m-card);border:1px solid var(--m-line);border-radius:var(--m-r);
+  padding:var(--m-pad);box-shadow:var(--m-sh);
+}
+
+/* 快速记录条 */
+.mquick{
+  display:flex;align-items:center;gap:8px;background:var(--m-card);
+  border:1px solid var(--m-line);border-radius:var(--m-r);padding:9px 10px;box-shadow:var(--m-sh);
+}
+.mquick .qk{font-size:12px;color:var(--m-muted);flex:0 0 auto;padding-left:3px}
+.mquick input{
+  flex:1 1 auto;min-width:0;border:1px solid var(--m-line2);background:transparent;
+  border-radius:var(--m-r-sm);padding:7px 9px;font:600 13px/1 var(--g-sans);color:var(--m-ink);
+}
+.mquick button{
+  flex:0 0 auto;border:none;background:var(--m-brand);color:#fff;border-radius:var(--m-r-sm);
+  padding:9px 13px;font:700 12.5px/1 var(--g-sans);cursor:pointer;
+}
+[data-v="b"] .mquick button{color:#06120E}
+[data-v="c"] .mquick button{background:var(--m-brand);color:#FFFDF9}
+
+/* Hero 大数字 */
+.mhero{padding:6px 0 2px;text-align:center}
+.mhero .k{font-size:12px;color:var(--m-muted)}
+.mbig{
+  font-size:46px;font-weight:800;letter-spacing:-.035em;line-height:1.06;
+  color:var(--m-ink);font-variant-numeric:tabular-nums;margin-top:2px;
+}
+.mbig i{font-size:16px;font-weight:700;font-style:normal;color:var(--m-muted);margin-left:3px;letter-spacing:0}
+.mhero .meta{font-size:11.5px;color:var(--m-muted);margin-top:5px}
+
+/* 指标格 */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mcell{background:var(--m-card);border:1px solid var(--m-line);border-radius:var(--m-r);padding:11px 12px;box-shadow:var(--m-sh)}
+.mcell .lbl{font-size:11px;color:var(--m-muted);font-weight:600}
+.mcell .val{font-size:20px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.25;margin-top:2px}
+.mcell .val i{font-size:10.5px;font-weight:700;font-style:normal;color:var(--m-muted);margin-left:2px}
+.mcell .sub{font-size:10.5px;color:var(--m-faint);font-variant-numeric:tabular-nums}
+.mbar{height:4px;border-radius:99px;background:var(--m-line);overflow:hidden;margin-top:7px}
+.mbar i{display:block;height:100%;background:var(--m-brand);border-radius:99px}
+.mcell.over .mbar i{background:var(--m-warn)}
+.mcell.over .val{color:var(--m-warn)}
+.mcell.near .mbar i{background:var(--m-amber)}
+
+/* 行 / 列表 */
+.mrow{
+  display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--m-line);
+}
+.mrow:last-child{border-bottom:none}
+.mrow .t{flex:1 1 auto;min-width:0}
+.mrow .t b{display:block;font-size:13px;font-weight:700;letter-spacing:-.005em}
+.mrow .t span{display:block;font-size:11px;color:var(--m-muted);margin-top:1px}
+.mrow .r{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--m-ink2);font-variant-numeric:tabular-nums}
+.midx{
+  flex:0 0 auto;width:21px;height:21px;border-radius:99px;display:grid;place-items:center;
+  background:var(--m-line);color:var(--m-muted);font-size:10.5px;font-weight:800;
+}
+
+/* 标签 */
+.mtag{
+  display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:99px;
+  background:var(--m-line);color:var(--m-ink2);white-space:nowrap;
+}
+.mtag.brand{background:color-mix(in srgb,var(--m-brand) 14%,transparent);color:var(--m-brand)}
+[data-v="b"] .mtag.brand{background:rgba(47,227,174,.14)}
+
+/* 按钮 */
+.mbtn{
+  display:block;width:100%;text-align:center;border:none;cursor:pointer;
+  background:var(--m-brand);color:#fff;border-radius:var(--m-r-sm);
+  padding:12px 14px;font:700 13px/1 var(--g-sans);margin-top:11px;
+}
+[data-v="b"] .mbtn{color:#06120E;box-shadow:0 6px 18px rgba(47,227,174,.22)}
+.mbtn.ghost{background:transparent;color:var(--m-brand);border:1px solid var(--m-line2)}
+
+/* 伪下拉框 */
+.mselect{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--m-card);border:1px solid var(--m-line2);border-radius:var(--m-r-sm);
+  padding:12px 13px;font-size:13.5px;font-weight:700;box-shadow:var(--m-sh);
+}
+.mselect .car{color:var(--m-muted);font-size:10px}
+.mlegend{display:flex;gap:14px;font-size:10.5px;color:var(--m-muted);margin-top:8px;padding-left:2px}
+.mlegend span{display:inline-flex;align-items:center;gap:4px}
+
+/* 折线图 */
+.mchart{margin-top:4px}
+.mchart svg{display:block;width:100%;height:auto}
+.maxis{display:flex;justify-content:space-between;font-size:10px;color:var(--m-faint);margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* 打卡率条 */
+.mbars{display:flex;gap:5px;align-items:flex-end;height:56px;margin-top:6px}
+.mbars i{
+  flex:1;background:var(--m-line);border-radius:3px 3px 0 0;display:block;position:relative;
+}
+.mbars i.f{background:var(--m-brand)}
+.mbars i.p{background:color-mix(in srgb,var(--m-brand) 34%,transparent)}
+[data-v="b"] .mbars i.p{background:rgba(47,227,174,.32)}
+
+/* 缩略对比 */
+.mthumbs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.mthumb{
+  aspect-ratio:3/4;border-radius:var(--m-r-sm);border:1px dashed var(--m-line2);
+  display:grid;place-items:center;font-size:10.5px;color:var(--m-faint);background:var(--m-bg2);
+}
+
+/* 底栏（仅 D 用） */
+.mtabbar{
+  position:sticky;bottom:0;display:flex;background:var(--m-bg2);
+  border-top:1px solid var(--m-line);padding:7px 2px 9px;z-index:6;
+}
+/* 6 格：5 个一级页 + 更多。窄屏下每格约 52px，图标 18px + 9px 文字仍排得下 */
+.mtabbar b{
+  flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:9px;font-weight:600;color:var(--m-muted);letter-spacing:.01em;white-space:nowrap;
+}
+.mtabbar b.on{color:var(--m-brand);font-weight:800}
+.mtabbar svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   四版各自的结构性差异（不只是换色）
+   ============================================================ */
+
+/* A：卡片退化为「发丝分割线 + 留白」，去掉一切边框与阴影 */
+[data-v="a"] .mcell,
+[data-v="a"] .mcard,
+[data-v="a"] .mquick{
+  background:transparent;border:none;border-radius:0;box-shadow:none;
+}
+[data-v="a"] .mcell{
+  border-top:1px solid var(--m-line);border-radius:0;padding:12px 0 0;
+}
+[data-v="a"] .mquick{
+  border-bottom:1px solid var(--m-line);border-radius:0;padding:2px 0 12px;
+}
+[data-v="a"] .mcard{border-top:1px solid var(--m-line);padding:14px 0 0;border-radius:0}
+[data-v="a"] .mh{color:var(--m-ink);letter-spacing:.09em;font-size:10.5px}
+[data-v="a"] .mselect{border-radius:0;border-width:0 0 1px;border-color:var(--m-line2);padding:12px 0}
+[data-v="a"] .mbtn{border-radius:6px}
+[data-v="a"] .mnav{background:var(--m-bg)}
+[data-v="a"] .mbig{font-size:52px}
+
+/* C：衬线标题 + 点状分隔 + 序号圆牌 */
+[data-v="c"] .mh{
+  font-family:Georgia,"Songti SC","Source Han Serif SC",serif;
+  font-size:13px;letter-spacing:.01em;color:var(--m-brand);font-weight:700;
+}
+[data-v="c"] .mrow{border-bottom:1px dashed var(--m-line2)}
+[data-v="c"] .midx{background:color-mix(in srgb,var(--m-brand) 12%,transparent);color:var(--m-brand)}
+[data-v="c"] .mtop{padding-bottom:14px}
+[data-v="c"] .mbig{font-family:Georgia,"Songti SC",serif;font-size:44px}
+
+/* B：环形进度 + 霓虹发光 */
+.ring{display:flex;justify-content:center;padding:4px 0 2px;position:relative}
+.ring .ctr{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.ring .ctr b{
+  display:block;font-size:27px;font-weight:800;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;line-height:1.1;
+}
+.ring .ctr span{font-size:10.5px;color:var(--m-muted)}
+[data-v="b"] .ring .ctr b{text-shadow:0 0 22px rgba(47,227,174,.45)}
+.mbar.tall{height:6px}
+[data-v="b"] .mbar i{box-shadow:0 0 10px rgba(47,227,174,.55)}
+[data-v="b"] .mcell{border-color:rgba(255,255,255,.08)}
+[data-v="b"] .mnav{background:rgba(10,12,15,.92)}
+[data-v="b"] .mtop{background:transparent}
+
+/* D：表格式行 + 等宽数字 + 右对齐 */
+[data-v="d"] .mnum{font-variant-numeric:tabular-nums}
+.dtable{font-size:12px}
+.drow{
+  display:grid;grid-template-columns:1fr 54px 54px 46px;gap:6px;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--m-line);
+}
+.drow.hd{
+  font-size:10px;font-weight:800;letter-spacing:.07em;color:var(--m-muted);
+  border-bottom:1px solid var(--m-line2);padding-bottom:6px;
+}
+.drow .nm{font-weight:700;color:var(--m-ink)}
+.drow .ac{
+  text-align:right;font-weight:700;font-variant-numeric:tabular-nums;
+  font-family:var(--m-mono);font-size:11.5px;
+}
+.drow .tg{
+  text-align:right;font-variant-numeric:tabular-nums;font-family:var(--m-mono);
+  font-size:11.5px;color:var(--m-muted);
+}
+.drow .pct{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;font-size:11.5px}
+.dspark{height:5px;border-radius:99px;background:var(--m-line);overflow:hidden;margin-top:5px}
+.dspark i{display:block;height:100%;border-radius:99px;background:var(--m-brand)}
+.dspark i.over{background:var(--m-warn)}
+[data-v="d"] .mcell .val{font-family:var(--m-mono);font-size:19px}
+[data-v="d"] .mh{color:var(--m-ink);letter-spacing:.08em;font-size:10px}
+[data-v="d"] .mtop{padding-bottom:8px}
+[data-v="d"] .mrow{padding:9px 0}
+
+/* 手机标题下的说明 */
+.phones-head{
+  display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  max-width:900px;margin-top:34px;
+}
+.phones-head .t{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--g-muted)}
+.phones-head .s{font-size:12px;color:var(--g-faint)}
+@media(max-width:720px){
+  .hero h1{font-size:26px}
+  .frame{width:300px}
+  .screen{height:600px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ========================= 页头 ========================= -->
+<header class="hero">
+  <span class="kicker">改版方案 · 4 版对比</span>
+  <h1>FitLog 整体设计 · 四版方向样张</h1>
+  <p>四版不是换配色，而是<strong>四种不同的设计取向</strong>——排版范式、信息密度、色彩策略、导航形态都不同。每版都用真实内容渲染了「今日 / 训练 / 进度」三个核心屏，可以直接对比判断。</p>
+  <p>四版都保持现有技术前提不变：<code>零依赖单文件</code>、<code>无构建步骤</code>、9 个页面结构不动、数据层与全部业务逻辑一行不改。</p>
+  <div class="note">
+    <strong>屏内数字为示意数据</strong>（按应用自身的算法口径造：TDEE 约 2100、缺口 450 kcal、蛋白 2.0 g/kg）。只用于判断版面与观感，不代表你的真实记录。
+  </div>
+</header>
+
+<!-- ========================= 吸顶跳转 ========================= -->
+<div class="bar">
+  <span class="lab">跳到</span>
+  <button class="jump" onclick="go('a')"><b>A</b> 极简数据流</button>
+  <button class="jump" onclick="go('b')"><b>B</b> 深色霓虹</button>
+  <button class="jump" onclick="go('c')"><b>C</b> 温暖手账</button>
+  <button class="jump" onclick="go('d')"><b>D</b> 紧凑控制台</button>
+  <button class="jump" onclick="go('cmp')">对比表</button>
+</div>
+
+<!-- ========================= A ========================= -->
+<section class="variant" id="v-a">
+  <div class="v-head">
+    <div class="v-left">
+      <div class="v-idx"><i>A</i> 方案一</div>
+      <h2 class="v-h2">极简数据流</h2>
+      <p class="v-desc">
+        数据即界面。用<strong>发丝分割线和大面积留白</strong>取代卡片边框与阴影，让数字成为唯一的主角。
+        字号对比拉得很开——关键数字 52px、辅助文字 10.5px——层级不靠颜色而靠尺度。
+        气质接近 Linear / Vercel 那类工具：克制、干净、久看不累。
+      </p>
+      <div class="v-meta">
+        <span class="pill good">最清爽 · 内容通透</span>
+        <span class="pill">信息密度 中低</span>
+        <span class="pill mid">改动幅度 中</span>
+      </div>
+    </div>
+    <div class="v-right">
+      <div class="t">色彩令牌</div>
+      <div class="sw">
+        <div><i style="background:#FFFFFF"></i><span>#FFFFFF</span></div>
+        <div><i style="background:#EDEDE9"></i><span>#EDEDE9</span></div>
+        <div><i style="background:#0F1113"></i><span>#0F1113</span></div>
+        <div><i style="background:#0E8A67"></i><span>#0E8A67</span></div>
+        <div><i style="background:#E8631A"></i><span>#E8631A</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phones-head">
+    <span class="t">三个核心屏</span>
+    <span class="s">可上下滚动查看完整内容 →</span>
+  </div>
+  <div class="phones">
+
+    <!-- A · 今日 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="a">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">FitLog</div><div class="mdate">9月20日 周日 · 第 9 周</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b class="on">今日</b><b>体重</b><b>训练</b><b>饮食</b><b>进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mquick">
+              <span class="qk">今日体重</span>
+              <input value="59.4">
+              <button>保存</button>
+            </div>
+          </div>
+          <div class="msec"><div class="mhero">
+            <div class="k">距离目标还差</div>
+            <div class="mbig">4.6<i>kg</i></div>
+            <div class="meta">已减 2.4 kg · 起始 61.8 · 目标 55.0</div>
+          </div></div>
+          <div class="msec">
+            <div class="mh">今日饮食进度 <em>去记录 →</em></div>
+            <div class="mgrid">
+              <div class="mcell near">
+                <div class="lbl">热量</div>
+                <div class="val">1420<i>kcal</i></div>
+                <div class="sub">目标 1650 · 86%</div>
+                <div class="mbar"><i style="width:86%"></i></div>
+              </div>
+              <div class="mcell">
+                <div class="lbl">蛋白质</div>
+                <div class="val">96<i>g</i></div>
+                <div class="sub">目标 119 · 81%</div>
+                <div class="mbar"><i style="width:81%"></i></div>
+              </div>
+              <div class="mcell">
+                <div class="lbl">脂肪</div>
+                <div class="val">44<i>g</i></div>
+                <div class="sub">目标 47 · 94%</div>
+                <div class="mbar"><i style="width:94%"></i></div>
+              </div>
+              <div class="mcell">
+                <div class="lbl">碳水</div>
+                <div class="val">158<i>g</i></div>
+                <div class="sub">目标 160 · 99%</div>
+                <div class="mbar"><i style="width:99%"></i></div>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">今日训练</div>
+            <div class="mrow">
+              <div class="t"><b>基础激活日</b><span>核心收紧 · 猫牛式 · 臀桥 · 死虫 · 快走 30min</span></div>
+              <span class="mtag">未打卡</span>
+            </div>
+            <button class="mbtn">去训练打卡</button>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">今日</div>
+    </div>
+
+    <!-- A · 训练 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="a">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">训练打卡</div><div class="mdate">9月20日 周日</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b>今日</b><b>体重</b><b class="on">训练</b><b>饮食</b><b>进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mh">选择今日模板</div>
+            <div class="mselect"><span>● 基础激活日</span><span class="car">▼</span></div>
+            <div class="mlegend"><span>○ 基础</span><span>◐ 进阶</span><span>● 待解锁</span></div>
+            <button class="mbtn ghost">✎ 编辑此模板 / 加自定义动作 ○</button>
+          </div>
+          <div class="msec">
+            <div class="mh">今日动作 <em>5 个</em></div>
+            <div class="mrow"><span class="midx">1</span><div class="t"><b>核心收紧（腹横肌）</b><span>呼气时肚脐轻收向脊柱</span></div><span class="r">12×3</span></div>
+            <div class="mrow"><span class="midx">2</span><div class="t"><b>猫牛式 Cat-Cow</b><span>配合呼吸活动脊柱</span></div><span class="r">10</span></div>
+            <div class="mrow"><span class="midx">3</span><div class="t"><b>臀桥 Glute Bridge</b><span>顶髋至肩-髋-膝一线</span></div><span class="r">15×3</span></div>
+            <div class="mrow"><span class="midx">4</span><div class="t"><b>死虫 Dead Bug</b><span>腰贴地不塌</span></div><span class="r">10×3</span></div>
+            <div class="mrow"><span class="midx">5</span><div class="t"><b>快走 / 低冲击有氧</b><span>能正常说话，20-40 分钟</span></div><span class="r">30min</span></div>
+          </div>
+          <div class="msec">
+            <div class="mh">负荷进度 · 最近记录</div>
+            <div class="mrow"><div class="t"><b>臀桥</b><span>9月17日</span></div><span class="r">20kg × 12</span></div>
+            <div class="mrow"><div class="t"><b>死虫</b><span>9月17日</span></div><span class="r">自重 × 10</span></div>
+            <div class="mcell" style="margin-top:14px">
+              <div class="lbl">体感 RPE</div>
+              <div class="val">6<i>/ 10</i></div>
+              <div class="sub">备注：状态不错</div>
+            </div>
+            <button class="mbtn">完成打卡</button>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">训练</div>
+    </div>
+
+    <!-- A · 进度 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="a">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">进度</div><div class="mdate">近 8 周趋势</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b>今日</b><b>体重</b><b>训练</b><b>饮食</b><b class="on">进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mh">体重趋势 <em>-2.4 kg</em></div>
+            <div class="mchart">
+              <svg viewBox="0 0 300 122" preserveAspectRatio="none">
+                <line x1="0" y1="14" x2="300" y2="14" stroke="var(--m-line)" stroke-width="1"/>
+                <line x1="0" y1="62" x2="300" y2="62" stroke="var(--m-line)" stroke-width="1"/>
+                <line x1="0" y1="110" x2="300" y2="110" stroke="var(--m-line)" stroke-width="1"/>
+                <path d="M10,24.1 L50,39.3 L90,57 L130,46.9 L170,67.1 L210,79.8 L250,74.7 L290,84.8 L290,110 L10,110 Z"
+                      fill="var(--m-brand)" opacity=".09"/>
+                <path d="M10,24.1 L50,39.3 L90,57 L130,46.9 L170,67.1 L210,79.8 L250,74.7 L290,84.8"
+                      fill="none" stroke="var(--m-brand)" stroke-width="2" stroke-linejoin="round"/>
+                <circle cx="290" cy="84.8" r="3.6" fill="var(--m-brand)"/>
+              </svg>
+              <div class="maxis"><span>8/02</span><span>8/16</span><span>8/30</span><span>9/13</span><span>今天</span></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">近 4 周打卡率</div>
+            <div class="mgrid">
+              <div class="mcell">
+                <div class="lbl">训练</div>
+                <div class="val">87.5<i>%</i></div>
+                <div class="sub">24 / 28 天</div>
+              </div>
+              <div class="mcell">
+                <div class="lbl">腰围</div>
+                <div class="val">68.5<i>cm</i></div>
+                <div class="sub">起始 72.0 · -3.5</div>
+              </div>
+            </div>
+            <div class="mbars">
+              <i class="f" style="height:78%"></i><i class="f" style="height:92%"></i>
+              <i class="p" style="height:55%"></i><i class="f" style="height:100%"></i>
+            </div>
+            <div class="maxis" style="margin-top:5px"><span>第6周</span><span>第7周</span><span>第8周</span><span>第9周</span></div>
+          </div>
+          <div class="msec">
+            <div class="mh">体型变化对比</div>
+            <div class="mthumbs">
+              <div class="mthumb">第 1 周</div>
+              <div class="mthumb">今天</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">进度</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="nbox">
+      <div class="t">重构时会做什么</div>
+      <ul>
+        <li>卡片全部改为「发丝线 + 留白」，删除阴影与边框</li>
+        <li>首页大数字从 32px 提到 52px，正文压到 13.5px，拉开层级</li>
+        <li>指标格改为两列无框网格，进度条压到 4px</li>
+        <li>全站数字启用等宽对齐（tabular-nums），避免跳动</li>
+      </ul>
+    </div>
+    <div class="nbox risk">
+      <div class="t">取舍与风险</div>
+      <ul>
+        <li>信息密度最低——同样的数据要多滑一屏</li>
+        <li>去掉卡片后，各分区的边界感变弱，需要靠留白控制节奏</li>
+        <li>纯白底在户外强光下不如暖米色柔和</li>
+      </ul>
+    </div>
+  </div>
+
+  <button class="pickbtn" onclick="pick('A','极简数据流')"><span>✓</span> 就选这一版</button>
+</section>
+
+<!-- ========================= B ========================= -->
+<section class="variant" id="v-b">
+  <div class="v-head">
+    <div class="v-left">
+      <div class="v-idx"><i>B</i> 方案二</div>
+      <h2 class="v-h2">深色霓虹</h2>
+      <p class="v-desc">
+        把整个应用翻到暗面。OLED 近黑底 + 青绿霓虹主色，进度用<strong>发光条与环形</strong>表达，
+        数字带轻微辉光。健身类 App 的主流取向——晚上在健身房看一眼就知道今天练完没有，视觉冲击最强，
+        也最省电（OLED 黑像素不发光）。
+      </p>
+      <div class="v-meta">
+        <span class="pill good">最有型 · 夜间友好</span>
+        <span class="pill">信息密度 中</span>
+        <span class="pill risk">改动幅度 大</span>
+      </div>
+    </div>
+    <div class="v-right">
+      <div class="t">色彩令牌</div>
+      <div class="sw">
+        <div><i style="background:#0A0C0F"></i><span>#0A0C0F</span></div>
+        <div><i style="background:#14181D"></i><span>#14181D</span></div>
+        <div><i style="background:#F1F4F7"></i><span>#F1F4F7</span></div>
+        <div><i style="background:#2FE3AE"></i><span>#2FE3AE</span></div>
+        <div><i style="background:#FF7A45"></i><span>#FF7A45</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phones-head">
+    <span class="t">三个核心屏</span>
+    <span class="s">可上下滚动查看完整内容 →</span>
+  </div>
+  <div class="phones">
+
+    <!-- B · 今日 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="b">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">FitLog</div><div class="mdate">9月20日 周日 · 第 9 周</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b class="on">今日</b><b>体重</b><b>训练</b><b>饮食</b><b>进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="ring">
+              <svg viewBox="0 0 128 128" width="150" height="150">
+                <circle cx="64" cy="64" r="52" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="10"/>
+                <circle cx="64" cy="64" r="52" fill="none" stroke="var(--m-brand)" stroke-width="10"
+                        stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="58.8"
+                        transform="rotate(-90 64 64)"/>
+              </svg>
+              <div class="ctr">
+                <b>1420</b>
+                <span>目标 1650 kcal · 86%</span>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">三大营养素</div>
+            <div style="display:grid;gap:11px">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--m-muted)">蛋白质</span><span style="font-weight:700">96 / 119 g</span></div>
+                <div class="mbar tall"><i style="width:81%"></i></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--m-muted)">脂肪</span><span style="font-weight:700">44 / 47 g</span></div>
+                <div class="mbar tall"><i style="width:94%"></i></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--m-muted)">碳水</span><span style="font-weight:700">158 / 160 g</span></div>
+                <div class="mbar tall"><i style="width:99%"></i></div>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">体重</div>
+            <div class="mcard" style="display:flex;align-items:baseline;justify-content:space-between">
+              <div>
+                <div style="font-size:28px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums">59.4<span style="font-size:14px;color:var(--m-muted)"> kg</span></div>
+                <div style="font-size:11px;color:var(--m-muted);margin-top:2px">距目标 4.6 kg</div>
+              </div>
+              <span class="mtag brand">▼ 0.4 本周</span>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">今日训练 <em>未打卡</em></div>
+            <div class="mcard">
+              <div style="font-size:14px;font-weight:800">基础激活日</div>
+              <div style="font-size:11.5px;color:var(--m-muted);margin-top:3px">5 个动作 · 约 35 分钟</div>
+              <button class="mbtn">去训练打卡</button>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">今日</div>
+    </div>
+
+    <!-- B · 训练 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="b">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">训练打卡</div><div class="mdate">9月20日 周日</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b>今日</b><b>体重</b><b class="on">训练</b><b>饮食</b><b>进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mh">选择今日模板</div>
+            <div class="mselect"><span>● 基础激活日</span><span class="car">▼</span></div>
+            <div class="mlegend"><span>○ 基础</span><span>◐ 进阶</span><span>● 待解锁</span></div>
+            <button class="mbtn ghost">✎ 编辑此模板 / 加自定义动作 ○</button>
+          </div>
+          <div class="msec">
+            <div class="mh">今日动作 <em>5 个</em></div>
+            <div class="mcard" style="padding:2px 14px">
+              <div class="mrow"><span class="midx">1</span><div class="t"><b>核心收紧（腹横肌）</b><span>呼气时肚脐轻收向脊柱</span></div><span class="r">12×3</span></div>
+              <div class="mrow"><span class="midx">2</span><div class="t"><b>猫牛式 Cat-Cow</b><span>配合呼吸活动脊柱</span></div><span class="r">10</span></div>
+              <div class="mrow"><span class="midx">3</span><div class="t"><b>臀桥 Glute Bridge</b><span>顶髋至肩-髋-膝一线</span></div><span class="r">15×3</span></div>
+              <div class="mrow"><span class="midx">4</span><div class="t"><b>死虫 Dead Bug</b><span>腰贴地不塌</span></div><span class="r">10×3</span></div>
+              <div class="mrow"><span class="midx">5</span><div class="t"><b>快走 / 低冲击有氧</b><span>能正常说话</span></div><span class="r">30min</span></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">负荷进度 · 最近记录</div>
+            <div style="display:grid;gap:9px">
+              <div class="mcard" style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:700;font-size:13px">臀桥</span>
+                <span style="font-family:var(--g-mono);font-size:12px;color:var(--m-brand)">20kg × 12</span>
+              </div>
+              <div class="mcard" style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:700;font-size:13px">死虫</span>
+                <span style="font-family:var(--g-mono);font-size:12px;color:var(--m-brand)">自重 × 10</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+              <div class="mcard"><div class="lbl" style="font-size:11px;color:var(--m-muted)">体感 RPE</div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">6<span style="font-size:11px;color:var(--m-muted)">/10</span></div></div>
+              <div class="mcard"><div class="lbl" style="font-size:11px;color:var(--m-muted)">完成度</div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">100<span style="font-size:11px;color:var(--m-muted)">%</span></div></div>
+            </div>
+            <button class="mbtn">完成打卡</button>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">训练</div>
+    </div>
+
+    <!-- B · 进度 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="b">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">进度</div><div class="mdate">近 8 周趋势</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b>今日</b><b>体重</b><b>训练</b><b>饮食</b><b class="on">进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mh">体重趋势 <em>-2.4 kg</em></div>
+            <div class="mcard">
+              <div class="mchart">
+                <svg viewBox="0 0 300 122" preserveAspectRatio="none">
+                  <line x1="0" y1="14" x2="300" y2="14" stroke="var(--m-line)" stroke-width="1"/>
+                  <line x1="0" y1="62" x2="300" y2="62" stroke="var(--m-line)" stroke-width="1"/>
+                  <line x1="0" y1="110" x2="300" y2="110" stroke="var(--m-line)" stroke-width="1"/>
+                  <path d="M10,24.1 L50,39.3 L90,57 L130,46.9 L170,67.1 L210,79.8 L250,74.7 L290,84.8 L290,110 L10,110 Z"
+                        fill="url(#glow)"/>
+                  <defs>
+                    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#2FE3AE" stop-opacity=".38"/>
+                      <stop offset="1" stop-color="#2FE3AE" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M10,24.1 L50,39.3 L90,57 L130,46.9 L170,67.1 L210,79.8 L250,74.7 L290,84.8"
+                        fill="none" stroke="var(--m-brand)" stroke-width="2.2" stroke-linejoin="round"/>
+                  <circle cx="290" cy="84.8" r="4" fill="var(--m-brand)"/>
+                  <circle cx="290" cy="84.8" r="9" fill="var(--m-brand)" opacity=".18"/>
+                </svg>
+                <div class="maxis"><span>8/02</span><span>8/16</span><span>8/30</span><span>9/13</span><span>今天</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">近 4 周打卡率</div>
+            <div class="mcard" style="display:flex;align-items:center;gap:16px">
+              <div>
+                <div style="font-size:26px;font-weight:800;letter-spacing:-.03em;text-shadow:0 0 20px rgba(47,227,174,.4)">87.5%</div>
+                <div style="font-size:11px;color:var(--m-muted)">24 / 28 天</div>
+              </div>
+              <div class="mbars" style="flex:1;height:48px">
+                <i class="f" style="height:78%"></i><i class="f" style="height:92%"></i>
+                <i class="p" style="height:55%"></i><i class="f" style="height:100%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">围度变化</div>
+            <div class="mcard" style="display:flex;justify-content:space-between">
+              <div><div style="font-size:11px;color:var(--m-muted)">腰围</div><div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums">68.5<span style="font-size:11px;color:var(--m-muted)"> cm</span></div></div>
+              <div style="text-align:right"><div style="font-size:11px;color:var(--m-muted)">较起始</div><div style="font-size:19px;font-weight:800;color:var(--m-brand);font-variant-numeric:tabular-nums">-3.5</div></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">体型变化对比</div>
+            <div class="mthumbs">
+              <div class="mthumb">第 1 周</div>
+              <div class="mthumb">今天</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">进度</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="nbox">
+      <div class="t">重构时会做什么</div>
+      <ul>
+        <li>整体翻转为暗色主题，需要补一套暗色语义色（达标/超标）</li>
+        <li>首页热量改为环形进度，三大营养素改为发光长条</li>
+        <li>图表用渐变填充 + 端点光晕</li>
+        <li>同步改 <code>theme-color</code> 与 PWA 图标底色，否则状态栏会露白边</li>
+      </ul>
+    </div>
+    <div class="nbox risk">
+      <div class="t">取舍与风险</div>
+      <ul>
+        <li><b>改动幅度最大</b>——60 多处硬编码颜色要重新对暗色校一遍对比度</li>
+        <li>白天户外可读性变差；习惯浅色的人会觉得压抑</li>
+        <li>Canvas 图表里写死的颜色需要同步改（现在它在 JS 里）</li>
+        <li>建议做成「深色为主 + 保留浅色开关」，但那要再加一套令牌</li>
+      </ul>
+    </div>
+  </div>
+
+  <button class="pickbtn" onclick="pick('B','深色霓虹')"><span>✓</span> 就选这一版</button>
+</section>
+
+<!-- ========================= C ========================= -->
+<section class="variant" id="v-c">
+  <div class="v-head">
+    <div class="v-left">
+      <div class="v-idx"><i>C</i> 方案三</div>
+      <h2 class="v-h2">温暖手账</h2>
+      <p class="v-desc">
+        延续现有的暖米色基因，但把它做得更彻底：<strong>大圆角（20px）、柔和弥散阴影、墨绿加陶土橙</strong>，
+        分区标题改用衬线字，列表用虚线分隔、动作带序号圆牌。整体像一本纸质的训练手账——
+        亲和、耐看、不那么「数码」。
+      </p>
+      <div class="v-meta">
+        <span class="pill good">最耐看 · 改动最小</span>
+        <span class="pill">信息密度 中低</span>
+        <span class="pill good">改动幅度 小</span>
+      </div>
+    </div>
+    <div class="v-right">
+      <div class="t">色彩令牌</div>
+      <div class="sw">
+        <div><i style="background:#F4EFE6"></i><span>#F4EFE6</span></div>
+        <div><i style="background:#FFFDF9"></i><span>#FFFDF9</span></div>
+        <div><i style="background:#2A2622"></i><span>#2A2622</span></div>
+        <div><i style="background:#2F6B5A"></i><span>#2F6B5A</span></div>
+        <div><i style="background:#CE7346"></i><span>#CE7346</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phones-head">
+    <span class="t">三个核心屏</span>
+    <span class="s">可上下滚动查看完整内容 →</span>
+  </div>
+  <div class="phones">
+
+    <!-- C · 今日 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="c">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">FitLog</div><div class="mdate">9月20日 周日 · 第 9 周</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b class="on">今日</b><b>体重</b><b>训练</b><b>饮食</b><b>进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mquick">
+              <span class="qk">今日体重</span>
+              <input value="59.4">
+              <button>保存</button>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mcard">
+              <div class="mh">本周小结 <em>第 9 周</em></div>
+              <div class="mhero">
+                <div class="k">距离目标还差</div>
+                <div class="mbig">4.6<i>kg</i></div>
+                <div class="meta">已减 2.4 kg · 起始 61.8 · 目标 55.0</div>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">今日饮食进度 <em>去记录 →</em></div>
+            <div class="mgrid">
+              <div class="mcell near">
+                <div class="lbl">热量</div>
+                <div class="val">1420<i>kcal</i></div>
+                <div class="sub">目标 1650 · 86%</div>
+                <div class="mbar"><i style="width:86%"></i></div>
+              </div>
+              <div class="mcell">
+                <div class="lbl">蛋白质</div>
+                <div class="val">96<i>g</i></div>
+                <div class="sub">目标 119 · 81%</div>
+                <div class="mbar"><i style="width:81%"></i></div>
+              </div>
+              <div class="mcell">
+                <div class="lbl">脂肪</div>
+                <div class="val">44<i>g</i></div>
+                <div class="sub">目标 47 · 94%</div>
+                <div class="mbar"><i style="width:94%"></i></div>
+              </div>
+              <div class="mcell">
+                <div class="lbl">碳水</div>
+                <div class="val">158<i>g</i></div>
+                <div class="sub">目标 160 · 99%</div>
+                <div class="mbar"><i style="width:99%"></i></div>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">今日训练</div>
+            <div class="mcard">
+              <div class="mrow" style="padding-top:0">
+                <div class="t"><b>基础激活日</b><span>核心收紧 · 猫牛式 · 臀桥 · 死虫 · 快走</span></div>
+                <span class="mtag">未打卡</span>
+              </div>
+              <button class="mbtn">去训练打卡</button>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">今日</div>
+    </div>
+
+    <!-- C · 训练 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="c">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">训练打卡</div><div class="mdate">9月20日 周日</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b>今日</b><b>体重</b><b class="on">训练</b><b>饮食</b><b>进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mh">选择今日模板</div>
+            <div class="mselect"><span>● 基础激活日</span><span class="car">▼</span></div>
+            <div class="mlegend"><span>○ 基础</span><span>◐ 进阶</span><span>● 待解锁</span></div>
+            <button class="mbtn ghost">✎ 编辑此模板 / 加自定义动作 ○</button>
+          </div>
+          <div class="msec">
+            <div class="mh">今日动作 <em>5 个</em></div>
+            <div class="mcard">
+              <div class="mrow" style="padding-top:0"><span class="midx">1</span><div class="t"><b>核心收紧（腹横肌）</b><span>呼气时肚脐轻收向脊柱</span></div><span class="r">12×3</span></div>
+              <div class="mrow"><span class="midx">2</span><div class="t"><b>猫牛式 Cat-Cow</b><span>配合呼吸活动脊柱</span></div><span class="r">10</span></div>
+              <div class="mrow"><span class="midx">3</span><div class="t"><b>臀桥 Glute Bridge</b><span>顶髋至肩-髋-膝一线</span></div><span class="r">15×3</span></div>
+              <div class="mrow"><span class="midx">4</span><div class="t"><b>死虫 Dead Bug</b><span>腰贴地不塌</span></div><span class="r">10×3</span></div>
+              <div class="mrow" style="padding-bottom:0"><span class="midx">5</span><div class="t"><b>快走 / 低冲击有氧</b><span>能正常说话，20-40 分钟</span></div><span class="r">30min</span></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">负荷进度 · 最近记录</div>
+            <div class="mcard">
+              <div class="mrow" style="padding-top:0"><div class="t"><b>臀桥</b><span>9月17日</span></div><span class="r">20kg × 12</span></div>
+              <div class="mrow" style="padding-bottom:0"><div class="t"><b>死虫</b><span>9月17日</span></div><span class="r">自重 × 10</span></div>
+            </div>
+            <button class="mbtn">完成打卡</button>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">训练</div>
+    </div>
+
+    <!-- C · 进度 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="c">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">进度</div><div class="mdate">近 8 周趋势</div></div>
+          <div class="mava">F</div>
+        </div>
+        <nav class="mnav">
+          <b>今日</b><b>体重</b><b>训练</b><b>饮食</b><b class="on">进度</b><b>更多 <span class="car">▼</span></b>
+        </nav>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mcard">
+              <div class="mh">体重趋势 <em>-2.4 kg</em></div>
+              <div class="mchart">
+                <svg viewBox="0 0 300 122" preserveAspectRatio="none">
+                  <line x1="0" y1="14" x2="300" y2="14" stroke="var(--m-line)" stroke-width="1" stroke-dasharray="3 4"/>
+                  <line x1="0" y1="62" x2="300" y2="62" stroke="var(--m-line)" stroke-width="1" stroke-dasharray="3 4"/>
+                  <line x1="0" y1="110" x2="300" y2="110" stroke="var(--m-line)" stroke-width="1" stroke-dasharray="3 4"/>
+                  <path d="M10,24.1 L50,39.3 L90,57 L130,46.9 L170,67.1 L210,79.8 L250,74.7 L290,84.8"
+                        fill="none" stroke="var(--m-brand)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+                  <circle cx="290" cy="84.8" r="4.2" fill="var(--m-card)" stroke="var(--m-brand)" stroke-width="2.4"/>
+                </svg>
+                <div class="maxis"><span>8/02</span><span>8/16</span><span>8/30</span><span>9/13</span><span>今天</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mcard">
+              <div class="mh">近 4 周打卡率</div>
+              <div class="mgrid">
+                <div class="mcell">
+                  <div class="lbl">训练</div>
+                  <div class="val">87.5<i>%</i></div>
+                  <div class="sub">24 / 28 天</div>
+                </div>
+                <div class="mcell">
+                  <div class="lbl">腰围</div>
+                  <div class="val">68.5<i>cm</i></div>
+                  <div class="sub">起始 72.0 · -3.5</div>
+                </div>
+              </div>
+              <div class="mbars">
+                <i class="f" style="height:78%"></i><i class="f" style="height:92%"></i>
+                <i class="p" style="height:55%"></i><i class="f" style="height:100%"></i>
+              </div>
+              <div class="maxis" style="margin-top:5px"><span>第6周</span><span>第7周</span><span>第8周</span><span>第9周</span></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">体型变化对比</div>
+            <div class="mthumbs">
+              <div class="mthumb">第 1 周</div>
+              <div class="mthumb">今天</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <div class="cap">进度</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="nbox">
+      <div class="t">重构时会做什么</div>
+      <ul>
+        <li>圆角统一放大到 20px，阴影改为双层弥散阴影</li>
+        <li>分区标题（h2）换成衬线字，配色改用墨绿</li>
+        <li>列表分隔线改虚线，动作前加序号圆牌</li>
+        <li>点缀色从 #E08A5B 换成更沉的陶土橙 #CE7346</li>
+      </ul>
+    </div>
+    <div class="nbox risk">
+      <div class="t">取舍与风险</div>
+      <ul>
+        <li>与现状最接近——如果你已经觉得「还行」，这版提升感最小</li>
+        <li>衬线标题与无衬线正文混排，需要控制使用范围（只用在分区标题）</li>
+        <li>大圆角 + 大阴影在小屏上会略微压缩内容宽度</li>
+      </ul>
+    </div>
+  </div>
+
+  <button class="pickbtn" onclick="pick('C','温暖手账')"><span>✓</span> 就选这一版</button>
+</section>
+
+<!-- ========================= D ========================= -->
+<section class="variant" id="v-d">
+  <div class="v-head">
+    <div class="v-left">
+      <div class="v-idx"><i>D</i> 方案四</div>
+      <h2 class="v-h2">紧凑控制台</h2>
+      <p class="v-desc">
+        把「高效」推到极致。放弃卡片堆叠，改成<strong>表格化的行 + 内联迷你进度条</strong>，
+        字号整体压到 12.5px、行高收紧、数字用等宽字体右对齐。导航改为<strong>底部 tab bar</strong>——
+        单手拇指可及，也把宝贵的顶部空间还给内容。一屏能看到其他方案两倍的信息量。
+      </p>
+      <div class="v-meta">
+        <span class="pill good">信息密度最高</span>
+        <span class="pill good">单手最友好</span>
+        <span class="pill mid">改动幅度 中</span>
+      </div>
+    </div>
+    <div class="v-right">
+      <div class="t">色彩令牌</div>
+      <div class="sw">
+        <div><i style="background:#F6F7F9"></i><span>#F6F7F9</span></div>
+        <div><i style="background:#FFFFFF"></i><span>#FFFFFF</span></div>
+        <div><i style="background:#171A1E"></i><span>#171A1E</span></div>
+        <div><i style="background:#2A62C4"></i><span>#2A62C4</span></div>
+        <div><i style="background:#D9560F"></i><span>#D9560F</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phones-head">
+    <span class="t">三个核心屏</span>
+    <span class="s">底部 tab bar 需滚到最底才能看到 →</span>
+  </div>
+  <div class="phones">
+
+    <!-- D · 今日 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="d">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">今日</div><div class="mdate">9月20日 周日 · 第 9 周</div></div>
+          <div class="mava">F</div>
+        </div>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mquick">
+              <span class="qk">体重</span>
+              <input value="59.4">
+              <button>记</button>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">体重目标</div>
+            <div class="dtable">
+              <div class="drow hd"><span>项目</span><span class="ac">实际</span><span class="tg">目标</span><span class="pct">达成</span></div>
+              <div class="drow"><span class="nm">当前体重</span><span class="ac">59.4</span><span class="tg">55.0</span><span class="pct">—</span></div>
+              <div class="drow" style="border-bottom:none"><span class="nm">距目标</span><span class="ac">4.6</span><span class="tg">kg</span><span class="pct" style="color:var(--m-brand)">-2.4</span></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">今日饮食</div>
+            <div class="dtable">
+              <div class="drow hd"><span>营养素</span><span class="ac">摄入</span><span class="tg">目标</span><span class="pct">达成</span></div>
+              <div class="drow">
+                <span><span class="nm">热量</span><div class="dspark"><i style="width:86%"></i></div></span>
+                <span class="ac">1420</span><span class="tg">1650</span><span class="pct">86%</span>
+              </div>
+              <div class="drow">
+                <span><span class="nm">蛋白质</span><div class="dspark"><i style="width:81%"></i></div></span>
+                <span class="ac">96</span><span class="tg">119</span><span class="pct">81%</span>
+              </div>
+              <div class="drow">
+                <span><span class="nm">脂肪</span><div class="dspark"><i style="width:94%"></i></div></span>
+                <span class="ac">44</span><span class="tg">47</span><span class="pct">94%</span>
+              </div>
+              <div class="drow" style="border-bottom:none">
+                <div><span class="nm">碳水</span><div class="dspark"><i style="width:99%"></i></div></div>
+                <span class="ac">158</span><span class="tg">160</span><span class="pct">99%</span>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">今日训练 <em>未打卡</em></div>
+            <div class="dtable">
+              <div class="drow"><span class="nm">基础激活日</span><span class="ac">5 项</span><span class="tg">35min</span><span class="pct" style="color:var(--m-muted)">未做</span></div>
+            </div>
+            <button class="mbtn">去训练打卡</button>
+          </div>
+        </div>
+        <div class="mtabbar">
+          <b class="on"><svg viewBox="0 0 24 24"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.5 9.6V20h13V9.6"/></svg>今日</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 18h4l2.6-6 2.8 3.6L16 7h4"/></svg>体重</b>
+          <b><svg viewBox="0 0 24 24"><path d="M3 9.2v5.6M6.4 6.6v10.8M17.6 6.6v10.8M21 9.2v5.6M6.4 12h11.2"/></svg>训练</b>
+          <b><svg viewBox="0 0 24 24"><path d="M7 3.2v6.4a2.4 2.4 0 0 0 4.8 0V3.2M9.4 12v8.8M17 3.2c-1.6 0-2.4 1.6-2.4 3.6s.8 3.6 2.4 3.6v10.4"/></svg>饮食</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 20V9M9.5 20V4M15 20v-7M20.5 20V8"/></svg>进度</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 12h.01M12 12h.01M20 12h.01"/></svg>更多</b>
+        </div>
+      </div></div>
+      <div class="cap">今日 · 底部 tab bar</div>
+    </div>
+
+    <!-- D · 训练 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="d">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">训练打卡</div><div class="mdate">9月20日 周日</div></div>
+          <div class="mava">F</div>
+        </div>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mh">选择模板</div>
+            <div class="mselect"><span>● 基础激活日</span><span class="car">▼</span></div>
+            <div class="mlegend"><span>○ 基础</span><span>◐ 进阶</span><span>● 待解锁</span></div>
+            <button class="mbtn ghost">✎ 编辑此模板</button>
+          </div>
+          <div class="msec">
+            <div class="mh">动作清单 <em>5 项</em></div>
+            <div class="dtable">
+              <div class="drow hd"><span>动作</span><span class="ac">组×次</span><span class="tg">上次</span><span class="pct">状态</span></div>
+              <div class="drow"><span class="nm">核心收紧</span><span class="ac">12×3</span><span class="tg">12×3</span><span class="pct" style="color:var(--m-ok)">✓</span></div>
+              <div class="drow"><span class="nm">猫牛式</span><span class="ac">10</span><span class="tg">10</span><span class="pct" style="color:var(--m-ok)">✓</span></div>
+              <div class="drow"><span class="nm">臀桥</span><span class="ac">15×3</span><span class="tg">20kg</span><span class="pct" style="color:var(--m-muted)">—</span></div>
+              <div class="drow"><span class="nm">死虫</span><span class="ac">10×3</span><span class="tg">自重</span><span class="pct" style="color:var(--m-muted)">—</span></div>
+              <div class="drow" style="border-bottom:none"><span class="nm">快走</span><span class="ac">30min</span><span class="tg">40min</span><span class="pct" style="color:var(--m-muted)">—</span></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">负荷进度</div>
+            <div class="dtable">
+              <div class="drow hd"><span>动作</span><span class="ac">重量</span><span class="tg">次数</span><span class="pct">日期</span></div>
+              <div class="drow"><span class="nm">臀桥</span><span class="ac">20kg</span><span class="tg">12</span><span class="pct">9/17</span></div>
+              <div class="drow" style="border-bottom:none"><span class="nm">死虫</span><span class="ac">自重</span><span class="tg">10</span><span class="pct">9/17</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px">
+              <div class="mcard"><div style="font-size:10px;color:var(--m-muted);font-weight:700">RPE</div><div style="font-size:18px;font-weight:800;font-family:var(--m-mono)">6</div></div>
+              <div class="mcard"><div style="font-size:10px;color:var(--m-muted);font-weight:700">完成</div><div style="font-size:18px;font-weight:800;font-family:var(--m-mono)">3/5</div></div>
+            </div>
+            <button class="mbtn">完成打卡</button>
+          </div>
+        </div>
+        <div class="mtabbar">
+          <b><svg viewBox="0 0 24 24"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.5 9.6V20h13V9.6"/></svg>今日</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 18h4l2.6-6 2.8 3.6L16 7h4"/></svg>体重</b>
+          <b class="on"><svg viewBox="0 0 24 24"><path d="M3 9.2v5.6M6.4 6.6v10.8M17.6 6.6v10.8M21 9.2v5.6M6.4 12h11.2"/></svg>训练</b>
+          <b><svg viewBox="0 0 24 24"><path d="M7 3.2v6.4a2.4 2.4 0 0 0 4.8 0V3.2M9.4 12v8.8M17 3.2c-1.6 0-2.4 1.6-2.4 3.6s.8 3.6 2.4 3.6v10.4"/></svg>饮食</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 20V9M9.5 20V4M15 20v-7M20.5 20V8"/></svg>进度</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 12h.01M12 12h.01M20 12h.01"/></svg>更多</b>
+        </div>
+      </div></div>
+      <div class="cap">训练 · 表格化清单</div>
+    </div>
+
+    <!-- D · 进度 -->
+    <div class="slot">
+      <div class="frame"><div class="screen phone" data-v="d">
+        <div class="sbar"><span>9:41</span><span>●●● 5G ▮</span></div>
+        <div class="mtop">
+          <div><div class="mbrand">进度</div><div class="mdate">近 8 周趋势</div></div>
+          <div class="mava">F</div>
+        </div>
+        <div class="mbody">
+          <div class="msec">
+            <div class="mh">体重 <em>-2.4 kg</em></div>
+            <div class="mcard">
+              <div class="mchart">
+                <svg viewBox="0 0 300 122" preserveAspectRatio="none">
+                  <line x1="0" y1="14" x2="300" y2="14" stroke="var(--m-line)" stroke-width="1"/>
+                  <line x1="0" y1="62" x2="300" y2="62" stroke="var(--m-line)" stroke-width="1"/>
+                  <line x1="0" y1="110" x2="300" y2="110" stroke="var(--m-line)" stroke-width="1"/>
+                  <path d="M10,24.1 L50,39.3 L90,57 L130,46.9 L170,67.1 L210,79.8 L250,74.7 L290,84.8"
+                        fill="none" stroke="var(--m-brand)" stroke-width="1.8" stroke-linejoin="round"/>
+                  <circle cx="290" cy="84.8" r="3.2" fill="var(--m-brand)"/>
+                </svg>
+                <div class="maxis"><span>8/02</span><span>8/16</span><span>8/30</span><span>9/13</span><span>今天</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">指标汇总</div>
+            <div class="dtable">
+              <div class="drow hd"><span>指标</span><span class="ac">当前</span><span class="tg">起始</span><span class="pct">变化</span></div>
+              <div class="drow"><span class="nm">体重</span><span class="ac">59.4</span><span class="tg">61.8</span><span class="pct" style="color:var(--m-ok)">-2.4</span></div>
+              <div class="drow"><span class="nm">腰围</span><span class="ac">68.5</span><span class="tg">72.0</span><span class="pct" style="color:var(--m-ok)">-3.5</span></div>
+              <div class="drow" style="border-bottom:none"><span class="nm">臀围</span><span class="ac">92.0</span><span class="tg">93.5</span><span class="pct" style="color:var(--m-ok)">-1.5</span></div>
+            </div>
+          </div>
+          <div class="msec">
+            <div class="mh">近 4 周打卡率</div>
+            <div class="mcard">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-size:22px;font-weight:800;font-family:var(--m-mono)">87.5%</span>
+                <span style="font-size:11px;color:var(--m-muted)">24 / 28 天</span>
+              </div>
+              <div class="mbars" style="height:44px">
+                <i class="f" style="height:78%"></i><i class="f" style="height:92%"></i>
+                <i class="p" style="height:55%"></i><i class="f" style="height:100%"></i>
+              </div>
+              <div class="maxis" style="margin-top:5px"><span>第6周</span><span>第7周</span><span>第8周</span><span>第9周</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="mtabbar">
+          <b><svg viewBox="0 0 24 24"><path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.5 9.6V20h13V9.6"/></svg>今日</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 18h4l2.6-6 2.8 3.6L16 7h4"/></svg>体重</b>
+          <b><svg viewBox="0 0 24 24"><path d="M3 9.2v5.6M6.4 6.6v10.8M17.6 6.6v10.8M21 9.2v5.6M6.4 12h11.2"/></svg>训练</b>
+          <b><svg viewBox="0 0 24 24"><path d="M7 3.2v6.4a2.4 2.4 0 0 0 4.8 0V3.2M9.4 12v8.8M17 3.2c-1.6 0-2.4 1.6-2.4 3.6s.8 3.6 2.4 3.6v10.4"/></svg>饮食</b>
+          <b><svg viewBox="0 0 24 24"><path d="M4 20V9M9.5 20V4M15 20v-7M20.5 20V8"/></svg>进度</b>
+          <b class="on"><svg viewBox="0 0 24 24"><path d="M4 12h.01M12 12h.01M20 12h.01"/></svg>更多</b>
+        </div>
+      </div></div>
+      <div class="cap">进度 · 汇总表</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="nbox">
+      <div class="t">重构时会做什么</div>
+      <ul>
+        <li>导航从顶部双行 tab 改为<strong>底部 tab bar</strong>（5 个一级页 + 更多，共 6 格）</li>
+        <li>「更多」改为一个<strong>真实页面</strong>而不是弹出面板（面板必然遮盖内容）</li>
+        <li>饮食/体重指标改为四行表格 + 内联迷你条，去掉卡片堆叠</li>
+        <li>字号基准 13.5px → 13px，行高 1.62 → 1.5，数字改等宽右对齐</li>
+        <li>强调色换成更「工具感」的蓝 #2A62C4</li>
+      </ul>
+    </div>
+    <div class="nbox risk">
+      <div class="t">取舍与风险</div>
+      <ul>
+        <li>「美」让位于「快」——视觉上最朴素，不像消费品 App</li>
+        <li>12.5px 字号在手机上偏小，中老年或视力不佳时吃力</li>
+        <li>底部 tab 与 iOS 手势条、安卓返回手势区需要额外留安全边距</li>
+        <li>表格化布局在窄屏（360px 以下）需要降级为两列</li>
+      </ul>
+    </div>
+  </div>
+
+  <button class="pickbtn" onclick="pick('D','紧凑控制台')"><span>✓</span> 就选这一版</button>
+</section>
+
+<!-- ========================= 对比表 ========================= -->
+<section class="variant" id="cmp">
+  <div class="v-head">
+    <div class="v-left">
+      <div class="v-idx"><i>≡</i> 横向对比</div>
+      <h2 class="v-h2">四版放在一起看</h2>
+      <p class="v-desc">如果只看一个维度，看「信息密度」和「气质」这两列就够了——它们决定了你每天用它的感受。</p>
+    </div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>方案</th><th>气质</th><th>信息密度</th><th>色彩策略</th><th>导航形态</th><th>改动幅度</th><th>最适合</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="dot" style="background:#0E8A67"></span>A 极简数据流</td>
+          <td>克制、干净、工具感</td>
+          <td>中低 · 一屏约 6 项</td>
+          <td>纯白 + 单一绿点缀，靠明暗对比</td>
+          <td>顶部 tab（不变）</td>
+          <td>中</td>
+          <td>喜欢安静界面、不介意多滑两下</td>
+        </tr>
+        <tr>
+          <td><span class="dot" style="background:#2FE3AE"></span>B 深色霓虹</td>
+          <td>有型、张扬、夜店感</td>
+          <td>中 · 一屏约 8 项</td>
+          <td>近黑底 + 霓虹青绿，发光表达进度</td>
+          <td>顶部 tab（暗色版）</td>
+          <td>大</td>
+          <td>多在晚上/健身房用，看重观感冲击</td>
+        </tr>
+        <tr>
+          <td><span class="dot" style="background:#2F6B5A"></span>C 温暖手账</td>
+          <td>温和、耐看、纸感</td>
+          <td>中低 · 一屏约 6 项</td>
+          <td>暖米色 + 墨绿 + 陶土橙</td>
+          <td>顶部 tab（不变）</td>
+          <td>小</td>
+          <td>想保留现有调性，只要「更好看一点」</td>
+        </tr>
+        <tr>
+          <td><span class="dot" style="background:#2A62C4"></span>D 紧凑控制台</td>
+          <td>冷静、密度高、专业工具</td>
+          <td>高 · 一屏约 12 项</td>
+          <td>冷灰白 + 单一蓝，颜色只用来标状态</td>
+          <td>底部 tab bar（新）</td>
+          <td>中</td>
+          <td>想一屏看全、单手操作、效率优先</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========================= 怎么挑 ========================= -->
+<section class="tail">
+  <h2>怎么挑：问自己三个问题</h2>
+  <ol>
+    <li><strong>你主要在什么时间、什么场景打开它？</strong> 晚上 / 健身房 / 光线暗 → 倾向 <b>B</b>；白天随手记 → 倾向 <b>A</b> 或 <b>C</b>。</li>
+    <li><strong>你更在意「好看」还是「一眼看完」？</strong> 好看 → <b>A</b> / <b>B</b> / <b>C</b>；一眼看完 → <b>D</b>。</li>
+    <li><strong>你能接受多大的视觉改动？</strong> 想稳一点就 <b>C</b>（和现状最接近）；想彻底换个面貌就 <b>B</b>。</li>
+  </ol>
+  <p class="fine">
+    另外一个可以「混搭」的地方：<b>A / B / C 也可以换成 D 的底部 tab bar</b>——导航形态和视觉风格是两件独立的事。
+    比如「C 的配色 + D 的底部导航」也是个合理组合，你如果倾向某种混搭，直接说就行。
+  </p>
+</section>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+function go(id){
+  var el=document.getElementById(id==="cmp"?"cmp":"v-"+id);
+  if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function pick(code,name){
+  var txt="我选方案 "+code+" · "+name;
+  var done=function(){toast("已记下："+txt+"　回到对话发给我即可");};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done,function(){toast(txt);});
+  }else{
+    try{
+      var ta=document.createElement("textarea");
+      ta.value=txt;document.body.appendChild(ta);ta.select();
+      document.execCommand("copy");document.body.removeChild(ta);done();
+    }catch(e){toast(txt);}
+  }
+}
+var _tt=null;
+function toast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("on");
+  clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove("on");},2600);
+}
+</script>
+</body>
+</html>
